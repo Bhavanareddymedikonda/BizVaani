@@ -1,17 +1,26 @@
-"""LangGraph Agent — ShopState TypedDict."""
-from typing import TypedDict
+"""LangGraph Agent — ShopState TypedDict.
+
+Ref: BACKEND_STRUCTURE.md Section 3 (LangGraph Agent — ShopState)
+"""
+from typing import TypedDict, Optional
 
 
 class ShopState(TypedDict):
-    """State flowing through the LangGraph agent."""
+    # Input
     user_id: int
     shop_id: int
-    transcript: str
-    intent: str  # "sales_query" | "forecast" | "competitor" | "invoice" | "general"
-    sales_data: dict | None
-    market_data: dict | None
-    forecast_data: dict | None
-    why_text: str
-    what_text: str
-    rupees_impact: float
-    alert_triggered: bool
+    query: str
+    language: str  # 'hi', 'te', or 'en'
+
+    # Fetched context (parallel nodes)
+    sales_data: Optional[dict]
+    market_data: Optional[dict]
+    forecast_data: Optional[dict]
+
+    # Output
+    intent: Optional[str]
+    why_text: Optional[str]
+    what_text: Optional[str]
+    rupees_impact: Optional[float]
+    response_text: Optional[str]
+    alert_triggered: Optional[bool]

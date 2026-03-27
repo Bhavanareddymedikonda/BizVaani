@@ -1,24 +1,155 @@
-"""Dashboard route."""
-from fastapi import APIRouter
+"""Dashboard route — real DB queries.
+
+GET /api/dashboard → aggregated shop data: products, alerts, totals.
+Ref: BACKEND_STRUCTURE.md Section 4 (GET /api/dashboard)
+"""
+from datetime import date, timedelta
+from fastapi import APIRouter, Depends
+from sqlalchemy import select, func, and_
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from db.database import get_db
+from db.models import Shop, Product, SalesEntry, MarketPrice, MLForecast
+from core.auth_utils import get_current_user, TokenData
 
 router = APIRouter()
 
 
 @router.get("/dashboard")
-async def get_dashboard():
-    # TODO: Query real DB, aggregate per-shop
+async def get_dashboard(
+    current_user: TokenData = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    shop_id = current_user.shop_id
+    today = date.today()
+
+    # Fetch shop
+    shop_result = await db.execute(select(Shop).where(Shop.id == shop_id))
+    shop = shop_result.scalar_one_or_none()
+    if not shop:
+        return {"error": "Shop not found"}
+
+    # Fetch products
+    products_result = await db.execute(
+        select(Product).where(Product.shop_id == shop_id)
+    )
+    products = products_result.scalars().all()
+
+    # Today's sales per product
+    today_sales = await db.execute(
+        select(
+            SalesEntry.product_id,
+            func.sum(SalesEntry.quantity_sold).label("today_qty"),
+            func.sum(SalesEntry.revenue).label("today_revenue"),
+        )
+        .where(and_(SalesEntry.shop_id == shop_id, SalesEntry.entry_date == today))
+        .group_by(SalesEntry.product_id)
+    )
+    today_map = {row.product_id: {"qty": float(row.today_qty), "rev": float(row.today_revenue)} for row in today_sales}
+
+    # 7-day-ago sales per product (for trend calculation)
+    week_ago = today - timedelta(days=7)
+    week_ago_sales = await db.execute(
+        select(
+            SalesEntry.product_id,
+            func.sum(SalesEntry.quantity_sold).label("qty"),
+        )
+        .where(and_(SalesEntry.shop_id == shop_id, SalesEntry.entry_date == week_ago))
+        .group_by(SalesEntry.product_id)
+    )
+    week_ago_map = {row.product_id: float(row.qty) for row in week_ago_sales}
+
+    # Latest market prices for the shop's district
+    market_result = await db.execute(
+        select(MarketPrice)
+        .where(MarketPrice.district == shop.district)
+        .order_by(MarketPrice.price_date.desc())
+    )
+    market_prices = market_result.scalars().all()
+    mandi_map = {mp.commodity: mp.modal_price for mp in market_prices}
+
+    # Forecasts for risk detection
+    forecast_result = await db.execute(
+        select(MLForecast)
+        .where(and_(MLForecast.shop_id == shop_id, MLForecast.forecast_date == today))
+    )
+    forecasts = forecast_result.scalars().all()
+    forecast_map = {f.product_id: f for f in forecasts}
+
+    # Build product cards
+    top_products = []
+    total_revenue = 0.0
+    total_items = 0.0
+    total_profit = 0.0
+
+    for p in products:
+        t = today_map.get(p.id, {"qty": 0, "rev": 0})
+        wa_qty = week_ago_map.get(p.id, t["qty"] if t["qty"] else 1)
+        trend_pct = round(((t["qty"] - wa_qty) / wa_qty) * 100, 1) if wa_qty else 0
+
+        # Risk level from forecast
+        forecast = forecast_map.get(p.id)
+        if forecast and forecast.is_anomaly:
+            risk_level = "HIGH"
+        elif trend_pct < -15:
+            risk_level = "HIGH"
+        elif trend_pct < -5:
+            risk_level = "MEDIUM"
+        else:
+            risk_level = "LOW"
+
+        mandi_price = mandi_map.get(p.agmarknet_commodity, p.cost_price or p.selling_price * 0.85)
+
+        top_products.append({
+            "id": p.id,
+            "name": p.name,
+            "today_qty": int(t["qty"]),
+            "today_revenue": round(t["rev"]),
+            "trend_pct": trend_pct,
+            "mandi_price": round(mandi_price, 1),
+            "risk_level": risk_level,
+        })
+
+        total_revenue += t["rev"]
+        total_items += t["qty"]
+        if p.cost_price:
+            total_profit += (p.selling_price - p.cost_price) * t["qty"]
+
+    # Build alerts from HIGH risk products
+    alerts = []
+    for product_card in top_products:
+        if product_card["risk_level"] == "HIGH":
+            alerts.append({
+                "id": product_card["id"],
+                "product_name": product_card["name"],
+                "severity": "HIGH",
+                "message": f"Sales {'dropped' if product_card['trend_pct'] < 0 else 'spiked'} {abs(product_card['trend_pct'])}% vs last week",
+                "created_at": today.isoformat(),
+            })
+        elif product_card["risk_level"] == "MEDIUM":
+            alerts.append({
+                "id": product_card["id"],
+                "product_name": product_card["name"],
+                "severity": "MEDIUM",
+                "message": f"Sales trend at {product_card['trend_pct']}% — watch closely",
+                "created_at": today.isoformat(),
+            })
+
+    # Sort products by revenue descending
+    top_products.sort(key=lambda x: x["today_revenue"], reverse=True)
+
     return {
-        "shop": {"id": 1, "shop_name": "Ramesh Kirana Store", "city": "Nagpur", "categories": ["grains", "fmcg"]},
-        "top_products": [
-            {"id": 1, "name": "Rice", "today_qty": 30, "today_revenue": 1350, "trend_pct": -12, "mandi_price": 39.5, "risk_level": "HIGH"},
-            {"id": 2, "name": "Dal", "today_qty": 15, "today_revenue": 1200, "trend_pct": 5, "mandi_price": 72, "risk_level": "LOW"},
-            {"id": 3, "name": "Sugar", "today_qty": 20, "today_revenue": 860, "trend_pct": -3, "mandi_price": 42, "risk_level": "MEDIUM"},
-            {"id": 4, "name": "Cooking Oil", "today_qty": 10, "today_revenue": 1500, "trend_pct": 8, "mandi_price": 145, "risk_level": "LOW"},
-            {"id": 5, "name": "Atta", "today_qty": 25, "today_revenue": 925, "trend_pct": -18, "mandi_price": 35, "risk_level": "HIGH"},
-        ],
-        "alerts": [
-            {"id": 1, "product_name": "Rice", "severity": "HIGH", "message": "Sales dropped 22% — competitor undercut by ₹2", "created_at": "2026-03-27T06:00:00"},
-            {"id": 2, "product_name": "Atta", "severity": "MEDIUM", "message": "Restock needed in 4 days based on forecast", "created_at": "2026-03-27T06:00:00"},
-        ],
-        "total_today": {"revenue": 5835, "items_sold": 100, "profit_estimate": 1420},
+        "shop": {
+            "id": shop.id,
+            "shop_name": shop.shop_name,
+            "city": shop.district,
+            "categories": shop.categories,
+        },
+        "top_products": top_products[:10],
+        "alerts": alerts,
+        "total_today": {
+            "revenue": round(total_revenue),
+            "items_sold": int(total_items),
+            "profit_estimate": round(total_profit),
+        },
     }
