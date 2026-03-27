@@ -1,10 +1,5 @@
 "use client";
 
-// ============================================================
-// MicFAB — Task: Member E
-// See: FRONTEND_GUIDELINES.md (Section 4 — Mic FAB)
-// ============================================================
-
 import { useState } from "react";
 import VoiceModal from "./VoiceModal";
 
@@ -14,14 +9,16 @@ export default function MicFAB() {
   return (
     <>
       <button
+        data-mic-fab
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-20 left-1/2 -translate-x-1/2 w-16 h-16 rounded-full bg-orange-500 hover:bg-orange-600 shadow-lg flex items-center justify-center z-50 transition-all duration-200 active:scale-95"
-        aria-label="Voice assistant"
+        className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 w-14 h-14 bg-[#FF5500] text-white flex items-center justify-center shadow-xl transition-all duration-150 hover:bg-[#e04a00] active:scale-95"
+        aria-label="Ask BizVaani"
+        style={{ borderRadius: 0 }}
       >
-        <span className="text-2xl">🎙️</span>
+        <span className="text-xl">🎙️</span>
       </button>
 
-      {isOpen && <VoiceModal onClose={() => setIsOpen(false)} />}
+      <VoiceModal open={isOpen} onClose={() => setIsOpen(false)} />
     </>
   );
 }

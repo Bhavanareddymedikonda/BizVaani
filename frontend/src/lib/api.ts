@@ -97,12 +97,24 @@ export async function getDashboard() {
 
 // --- Forecast ---
 
-export async function getForecast(productName: string) {
+// Takes product_id (integer) — backend route is /api/forecast/{product_id}
+export async function getForecast(productId: number | string) {
   if (USE_MOCKS) {
     await new Promise((r) => setTimeout(r, 300));
-    return MOCK_FORECASTS_BY_PRODUCT[productName] || MOCK_FORECAST;
+    // Mock lookup by id or name for dev convenience
+    const key = String(productId);
+    return MOCK_FORECASTS_BY_PRODUCT[key] ?? MOCK_FORECAST;
   }
-  return request(`/api/forecast/${encodeURIComponent(productName)}`);
+  return request(`/api/forecast/${productId}`);
+}
+
+// --- Alerts ---
+export async function getAlerts() {
+  if (USE_MOCKS) {
+    await new Promise((r) => setTimeout(r, 200));
+    return (MOCK_DASHBOARD as { alerts?: unknown[] }).alerts ?? [];
+  }
+  return request("/api/alerts");
 }
 
 // --- Market Prices ---
@@ -165,15 +177,24 @@ export async function generateInvoice(data: GenerateInvoiceRequest) {
 
 // --- Voice (REST fallback — primary path is WebSocket) ---
 
-export async function voiceQuery(shopId: number, transcript: string) {
+export async function voiceQuery(shopId: number, transcript: string, language = "en") {
   if (USE_MOCKS) {
     await new Promise((r) => setTimeout(r, 1200));
     return MOCK_VOICE_RESPONSE;
   }
   return request("/api/voice/query", {
     method: "POST",
-    body: JSON.stringify({ shop_id: shopId, transcript }),
+    body: JSON.stringify({ shop_id: shopId, transcript, language }),
   });
+}
+
+// --- Invoice PDF Download ---
+export async function downloadInvoicePdf(invoiceId: number): Promise<Blob> {
+  const res = await fetch(`${API_URL}/api/invoice/pdf/${invoiceId}`, {
+    headers: { Authorization: `Bearer ${getToken()}` },
+  });
+  if (!res.ok) throw new Error(`PDF error: ${res.status}`);
+  return res.blob();
 }
 
 // --- CSV Upload ---

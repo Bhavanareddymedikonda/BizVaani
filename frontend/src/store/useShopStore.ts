@@ -3,6 +3,7 @@ import { create } from "zustand";
 interface Product {
   id: number;
   name: string;
+  product_name?: string;  // backend field alias
   today_qty: number;
   today_revenue: number;
   trend_pct: number;
