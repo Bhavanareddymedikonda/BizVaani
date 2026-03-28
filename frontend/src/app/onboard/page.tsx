@@ -111,6 +111,7 @@ export default function OnboardPage() {
   const [step, setStep] = useState(1);
   const [theme, setTheme] = useState<"light" | "dark">("dark");
   const [mounted, setMounted] = useState(false);
+  const [error, setError] = useState("");
   const [form, setForm] = useState({
     name: "",
     phone: "",
@@ -122,7 +123,39 @@ export default function OnboardPage() {
     categories: [] as string[],
   });
 
-  const handleNext = () => setStep(2);
+  const handleNext = () => {
+    // Validate Step 1 fields
+    if (!form.name.trim()) {
+      setError("Please enter your name");
+      return;
+    }
+    if (!form.phone.trim()) {
+      setError("Please enter your phone number");
+      return;
+    }
+    if (!form.password.trim()) {
+      setError("Please enter a password");
+      return;
+    }
+    if (!form.shop_name.trim()) {
+      setError("Please enter your shop name");
+      return;
+    }
+    if (!form.city.trim()) {
+      setError("Please enter your city");
+      return;
+    }
+    if (!form.state.trim()) {
+      setError("Please enter your state");
+      return;
+    }
+    if (form.categories.length === 0) {
+      setError("Please select at least one business category");
+      return;
+    }
+    setError("");
+    setStep(2);
+  };
 
   useEffect(() => {
     setMounted(true);
@@ -140,33 +173,35 @@ export default function OnboardPage() {
   };
 
   const handleFinish = async (dataPath: string) => {
-    try {
-      // Use mock data if user left fields empty for quick testing
-      const payload = {
-        name: form.name || "Test User",
-        phone: form.phone || "9876543210",
-        password: form.password || "password123",
-        shop_name: form.shop_name || "Test Shop",
-        city: form.city || "Mumbai",
-        state: form.state || "MH",
-        language: form.language,
-        categories: form.categories.length ? form.categories : ["fmcg", "grains"],
-      };
+    // Final validation before registration
+    if (!form.name.trim() || !form.phone.trim() || !form.password.trim() || 
+        !form.shop_name.trim() || !form.city.trim() || !form.state.trim() || 
+        form.categories.length === 0) {
+      setError("Please fill in all required fields");
+      return;
+    }
 
-      const res = await register(payload);
+    try {
+      const res = await register({
+        ...form,
+        categories: form.categories,
+      });
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       localStorage.setItem("bv_token", (res as any).access_token);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       localStorage.setItem("bv_user", JSON.stringify((res as any).user));
       console.log("Data path selected:", dataPath);
+      setError("");
       router.push("/dashboard");
     } catch (err: any) {
       console.error("Registration failed:", err);
       alert(err.message || "Registration failed. Please check your inputs.");
+      setError("Registration failed. Please try again.");
     }
   };
 
   const toggleCategory = (cat: string) => {
+    setError("");
     setForm((prev) => ({
       ...prev,
       categories: prev.categories.includes(cat)
@@ -198,161 +233,258 @@ export default function OnboardPage() {
         )}
       </header>
 
-      <main className="relative z-10 min-h-screen px-6 py-8 max-w-lg mx-auto flex items-center justify-center">
-        <div className="w-full pt-16">
+      <main className="relative z-10 min-h-screen px-6 py-16 max-w-lg mx-auto flex items-center justify-center w-full overflow-hidden">
+        <div className="w-full">
           <style>{`
-            .clay-card {
-              background: var(--card-bg);
-              border-radius: 24px;
-              padding: 48px;
-              box-shadow: var(--clay-shadow);
+            .auth-container {
+              background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(168, 85, 247, 0.1) 100%);
+              padding: 12px;
+              border-radius: 54px;
+              box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+              transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+              width: 100%;
+            }
+
+            .auth-container:hover {
+              transform: translateY(-12px) scale(1.01);
+              box-shadow: 0 35px 60px -15px rgba(0, 0, 0, 0.6);
+            }
+
+            .auth-card {
+              background: rgba(30, 27, 75, 0.85);
+              border-radius: 48px;
+              padding: 56px 48px;
+              box-shadow: 
+                inset 2px 2px 6px rgba(255, 255, 255, 0.1),
+                inset -2px -2px 6px rgba(0, 0, 0, 0.4),
+                0 10px 30px rgba(0, 0, 0, 0.3);
+              backdrop-filter: blur(24px);
               border: 1px solid rgba(255, 255, 255, 0.08);
-              backdrop-filter: blur(10px);
+              width: 100%;
+              position: relative;
+              overflow: hidden;
             }
 
-            [data-theme="dark"] .clay-card {
-              background: rgba(74, 61, 127, 0.4);
+            [data-theme="light"] .auth-card {
+              background: #f8fafc;
               box-shadow: 
-                12px 12px 24px rgba(0, 0, 0, 0.4),
-                -12px -12px 24px rgba(0, 212, 255, 0.1),
-                inset 0 0 0 1px rgba(0, 212, 255, 0.1);
+                12px 12px 24px #d1d9e6, 
+                -12px -12px 24px #ffffff,
+                inset 2px 2px 4px rgba(255,255,255,0.8);
+              border: none;
             }
 
-            [data-theme="light"] .clay-card {
-              background: rgba(243, 245, 249, 0.8);
-              box-shadow: 
-                12px 12px 24px rgba(0, 102, 255, 0.1),
-                -12px -12px 24px rgba(255, 100, 220, 0.05),
-                inset 4px 4px 8px rgba(0, 0, 0, 0.05),
-                inset -4px -4px 8px rgba(255, 255, 255, 0.8);
+            [data-theme="light"] .auth-container {
+              background: transparent;
+              box-shadow: none;
+              padding: 0;
             }
 
             .clay-input {
               background: rgba(255, 255, 255, 0.05) !important;
-              border: 1.5px solid rgba(0, 212, 255, 0.2) !important;
-              border-radius: 16px !important;
-              padding: 14px 18px !important;
+              border: 2px solid rgba(255, 255, 255, 0.1) !important;
+              border-radius: 20px !important;
+              padding: 16px 24px !important;
               font-size: 16px !important;
+              color: white !important;
               transition: all 0.3s ease !important;
-              box-shadow: inset 2px 2px 4px rgba(0, 0, 0, 0.1),
-                          inset -2px -2px 4px rgba(255, 255, 255, 0.05) !important;
+              box-shadow: inset 2px 2px 4px rgba(0,0,0,0.2) !important;
             }
 
-            .clay-input::placeholder {
-              color: rgba(160, 166, 181, 0.7) !important;
+            [data-theme="light"] .clay-input {
+              background: #f1f5f9 !important;
+              border: none !important;
+              color: #1e293b !important;
+              box-shadow: inset 2px 2px 5px #d1d9e6, inset -2px -2px 5px #ffffff !important;
+            }
+
+            [data-theme="light"] .clay-input option {
+              color: #1e293b !important;
+              background: #f1f5f9 !important;
             }
 
             .clay-input:focus {
               border-color: #00d4ff !important;
               background: rgba(255, 255, 255, 0.08) !important;
-              box-shadow: inset 2px 2px 4px rgba(0, 0, 0, 0.1),
-                          inset -2px -2px 4px rgba(255, 255, 255, 0.05),
-                          0 0 20px rgba(0, 212, 255, 0.3) !important;
+              transform: scale(1.01);
+              box-shadow: 0 0 20px rgba(0, 212, 255, 0.15), inset 2px 2px 4px rgba(0,0,0,0.2) !important;
+            }
+
+            [data-theme="light"] .clay-input:focus {
+              border-color: #6366f1 !important;
+              background: #e0e7ff !important;
+              box-shadow: inset 2px 2px 5px #d1d9e6, inset -2px -2px 5px #ffffff, 0 0 15px rgba(99, 102, 241, 0.2) !important;
             }
 
             .clay-button {
-              background: linear-gradient(135deg, #00d4ff 0%, #6d28d9 100%) !important;
-              border-radius: 16px !important;
-              padding: 14px 28px !important;
-              font-size: 16px !important;
-              font-weight: 600 !important;
-              border: 1px solid rgba(0, 212, 255, 0.3) !important;
-              box-shadow: 0 8px 32px rgba(0, 212, 255, 0.25),
-                          inset 1px 1px 2px rgba(255, 255, 255, 0.2) !important;
-              transition: all 0.3s ease !important;
+              background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%) !important;
+              border-radius: 20px !important;
+              padding: 18px 32px !important;
+              font-size: 18px !important;
+              font-weight: 800 !important;
+              border: none !important;
+              box-shadow: 0 10px 25px rgba(99, 102, 241, 0.4), inset 2px 2px 4px rgba(255,255,255,0.3) !important;
+              transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+              color: white !important;
             }
 
             .clay-button:hover {
-              box-shadow: 0 12px 40px rgba(0, 212, 255, 0.35),
-                          inset 1px 1px 2px rgba(255, 255, 255, 0.3) !important;
-              transform: translateY(-2px) !important;
+              transform: translateY(-4px) scale(1.02) !important;
+              box-shadow: 0 15px 35px rgba(99, 102, 241, 0.5), inset 2px 2px 4px rgba(255,255,255,0.4) !important;
+              filter: brightness(1.1);
             }
 
-            .clay-button:active {
-              transform: translateY(0) !important;
+            [data-theme="light"] .clay-button {
+              background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%) !important;
+              box-shadow: 0 10px 25px rgba(99, 102, 241, 0.3), inset 2px 2px 4px rgba(255,255,255,0.3) !important;
+              color: white !important;
             }
 
-            .section-title {
-              font-size: 32px !important;
-              font-weight: 700 !important;
-              color: var(--trae-text-primary) !important;
-              margin-bottom: 24px !important;
-            }
-
-            .section-subtitle {
-              font-size: 16px !important;
-              color: var(--trae-text-secondary) !important;
-              margin-bottom: 24px !important;
+            [data-theme="light"] .clay-button:hover {
+              transform: translateY(-4px) scale(1.02) !important;
+              box-shadow: 0 15px 35px rgba(99, 102, 241, 0.4), inset 2px 2px 4px rgba(255,255,255,0.4) !important;
+              filter: brightness(1.05);
             }
 
             .clay-label {
-              font-size: 15px !important;
+              display: block;
+              font-size: 14px !important;
               font-weight: 600 !important;
-              color: var(--trae-text-primary) !important;
-              margin-bottom: 8px !important;
-              display: block !important;
+              color: #cbd5e1 !important;
+              margin-bottom: 8px;
+            }
+
+            [data-theme="light"] .clay-label {
+              color: #475569 !important;
+            }
+
+            .section-title {
+              font-size: 36px !important;
+              font-weight: 900 !important;
+              background: linear-gradient(to bottom right, #fff, #94a3b8);
+              -webkit-background-clip: text;
+              -webkit-text-fill-color: transparent;
+              margin-bottom: 12px !important;
+            }
+
+            [data-theme="light"] .section-title {
+              background: linear-gradient(to bottom right, #1e293b, #64748b);
+              -webkit-background-clip: text;
+              -webkit-text-fill-color: transparent;
             }
 
             .sign-in-link {
               text-align: center;
-              margin-bottom: 16px;
-              font-size: 14px;
+              margin-bottom: 32px;
+              font-size: 15px;
               color: var(--trae-text-secondary);
             }
 
             .sign-in-link a {
-              color: var(--accent, #f97316);
-              font-weight: 600;
+              color: #00d4ff;
+              font-weight: 800;
               text-decoration: none;
-              transition: color 0.3s ease;
+              transition: all 0.3s ease;
+              padding: 6px 16px;
+              border-radius: 16px;
+              background: rgba(0, 212, 255, 0.1);
             }
 
             .sign-in-link a:hover {
-              color: var(--accent-hover, #ea580c);
+              background: rgba(0, 212, 255, 0.2);
+              box-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
+              transform: translateY(-2px);
             }
 
             .step-indicator {
               display: flex;
-              gap: 8px;
-              margin-bottom: 32px;
+              gap: 12px;
+              margin-bottom: 48px;
             }
 
             .step-bar {
-              height: 3px;
+              height: 8px;
               flex: 1;
-              border-radius: 2px;
-              background: rgba(255, 255, 255, 0.1);
-              transition: all 0.3s ease;
+              border-radius: 10px;
+              background: rgba(255, 255, 255, 0.05);
+              transition: all 0.4s ease;
             }
 
             .step-bar.active {
-              background: linear-gradient(90deg, #00d4ff 0%, #6d28d9 100%);
-              box-shadow: 0 0 12px rgba(0, 212, 255, 0.5);
+              background: linear-gradient(90deg, #6366f1 0%, #a855f7 100%);
+              box-shadow: 0 0 20px rgba(99, 102, 241, 0.5);
             }
 
             .category-button {
-              padding: 10px 18px !important;
-              border-radius: 20px !important;
+              padding: 14px 22px !important;
+              border-radius: 18px !important;
               font-size: 14px !important;
-              font-weight: 600 !important;
-              border: 2px solid !important;
+              font-weight: 700 !important;
+              border: 2px solid rgba(255, 255, 255, 0.1) !important;
               transition: all 0.3s ease !important;
               cursor: pointer !important;
-              background: rgba(255, 255, 255, 0.05) !important;
-              color: var(--trae-text-primary) !important;
-              border-color: rgba(0, 212, 255, 0.2) !important;
+              background: rgba(255, 255, 255, 0.03) !important;
+              color: white !important;
+            }
+
+            [data-theme="light"] .category-button {
+              border: 2px solid #cbd5e1 !important;
+              background: #f1f5f9 !important;
+              color: #1e293b !important;
+            }
+
+            [data-theme="light"] .category-button:hover {
+              border-color: #6366f1 !important;
+              background: #e0e7ff !important;
+              color: #1e293b !important;
+            }
+
+            [data-theme="light"] .category-button.selected {
+              background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%) !important;
+              border-color: transparent !important;
+              color: white !important;
+              box-shadow: 0 10px 20px rgba(99, 102, 241, 0.4) !important;
             }
 
             .category-button:hover {
-              border-color: #00d4ff !important;
-              background: rgba(0, 212, 255, 0.1) !important;
+              border-color: #6366f1 !important;
+              background: rgba(99, 102, 241, 0.1) !important;
+              transform: translateY(-3px);
             }
 
             .category-button.selected {
-              background: linear-gradient(135deg, #00d4ff 0%, #6d28d9 100%) !important;
+              background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%) !important;
               border-color: transparent !important;
-              color: white !important;
-              box-shadow: 0 0 16px rgba(0, 212, 255, 0.4) !important;
+              box-shadow: 0 10px 20px rgba(99, 102, 241, 0.4) !important;
+            }
+
+            .error-message {
+              background: rgba(239, 68, 68, 0.1);
+              border: 1px solid rgba(239, 68, 68, 0.5);
+              border-radius: 12px;
+              padding: 12px 16px;
+              margin-bottom: 20px;
+              color: #ff6b6b;
+              font-size: 14px;
+              font-weight: 600;
+              animation: slideDown 0.3s ease-out;
+            }
+
+            @keyframes slideDown {
+              from {
+                opacity: 0;
+                transform: translateY(-10px);
+              }
+              to {
+                opacity: 1;
+                transform: translateY(0);
+              }
+            }
+
+            [data-theme="light"] .error-message {
+              background: rgba(239, 68, 68, 0.05);
+              border: 1px solid rgba(239, 68, 68, 0.3);
+              color: #dc2626;
             }
           `}</style>
 
@@ -361,37 +493,52 @@ export default function OnboardPage() {
             <Link href="/login">Sign In</Link>
           </div>
 
-          <div className="clay-card">
-            {/* Step Indicator */}
-            <div className="step-indicator">
-              <div className={`step-bar ${step >= 1 ? "active" : ""}`} />
-              <div className={`step-bar ${step >= 2 ? "active" : ""}`} />
-            </div>
+          <div className="auth-container">
+            <div className="auth-card">
+              {/* Step Indicator */}
+              <div className="step-indicator">
+                <div className={`step-bar ${step >= 1 ? "active" : ""}`} />
+                <div className={`step-bar ${step >= 2 ? "active" : ""}`} />
+              </div>
 
-            <div className="space-y-5">
+              {/* Error Message Display */}
+              {error && <div className="error-message">{error}</div>}
+
+              <div className="space-y-6">
               {step === 1 && (
                 <>
-                  <h2 className="section-title">Set Up Your Shop</h2>
+                  <div className="text-center">
+                    <h2 className="section-title">Set Up Your Shop</h2>
+                    <p className="text-gray-400 text-sm font-medium">Create your AI-powered retail profile</p>
+                  </div>
 
                   <div className="space-y-5">
-                    <input placeholder="Your Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="w-full clay-input" />
-                    <input placeholder="Phone (10 digits)" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="w-full clay-input" />
-                    <input placeholder="Password" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} className="w-full clay-input" />
-                    <input placeholder="Shop Name" value={form.shop_name} onChange={(e) => setForm({ ...form, shop_name: e.target.value })} className="w-full clay-input" />
-                    <input placeholder="City" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} className="w-full clay-input" />
-                    <input placeholder="State" value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })} className="w-full clay-input" />
+                    <div className="grid grid-cols-2 gap-4">
+                      <input placeholder="Your Name" value={form.name} onChange={(e) => { setError(""); setForm({ ...form, name: e.target.value }); }} className="w-full clay-input" />
+                      <input placeholder="Phone" value={form.phone} onChange={(e) => { setError(""); setForm({ ...form, phone: e.target.value }); }} className="w-full clay-input" />
+                    </div>
+                    <input placeholder="Password" type="password" value={form.password} onChange={(e) => { setError(""); setForm({ ...form, password: e.target.value }); }} className="w-full clay-input" />
+                    <input placeholder="Shop Name" value={form.shop_name} onChange={(e) => { setError(""); setForm({ ...form, shop_name: e.target.value }); }} className="w-full clay-input" />
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <input placeholder="City" value={form.city} onChange={(e) => { setError(""); setForm({ ...form, city: e.target.value }); }} className="w-full clay-input" />
+                      <input placeholder="State" value={form.state} onChange={(e) => { setError(""); setForm({ ...form, state: e.target.value }); }} className="w-full clay-input" />
+                    </div>
 
                     {/* Language */}
-                    <select value={form.language} onChange={(e) => setForm({ ...form, language: e.target.value })} className="w-full clay-input">
-                      <option value="en">English</option>
-                      <option value="hi">Hindi</option>
-                      <option value="te">Telugu</option>
-                    </select>
+                    <div className="space-y-2">
+                      <label className="clay-label">Preferred Language</label>
+                      <select value={form.language} onChange={(e) => { setError(""); setForm({ ...form, language: e.target.value }); }} className="w-full clay-input appearance-none">
+                        <option value="en">English</option>
+                        <option value="hi">Hindi</option>
+                        <option value="te">Telugu</option>
+                      </select>
+                    </div>
 
                     {/* Categories */}
-                    <div>
-                      <label className="clay-label">Categories</label>
-                      <div className="flex flex-wrap gap-3">
+                    <div className="space-y-3">
+                      <label className="clay-label">Business Categories</label>
+                      <div className="flex flex-wrap gap-2">
                         {CATEGORIES.map((cat) => (
                           <button
                             key={cat}
@@ -406,8 +553,8 @@ export default function OnboardPage() {
                       </div>
                     </div>
 
-                    <button onClick={handleNext} className="w-full py-4 clay-button text-white mt-6">
-                      Next
+                    <button onClick={handleNext} className="w-full py-4 clay-button mt-6">
+                      Continue →
                     </button>
                   </div>
                 </>
@@ -415,41 +562,50 @@ export default function OnboardPage() {
 
               {step === 2 && (
                 <>
-                  <h2 className="section-title">How should we start?</h2>
-                  <p className="section-subtitle">Choose how to seed your shop data.</p>
+                  <div className="text-center">
+                    <h2 className="section-title">Data Strategy</h2>
+                    <p className="text-gray-400 text-sm font-medium">How should we seed your shop data?</p>
+                  </div>
 
                   <div className="space-y-4">
                     {[
-                      { icon: "📷", title: "Upload Bill Photo (OCR)", desc: "Photograph old paper bills", key: "ocr" },
-                      { icon: "📊", title: "Start with Industry Averages", desc: "Recommended — see insights instantly", key: "benchmark", recommended: true },
-                      { icon: "🎙️", title: "I'll Tell Daily by Voice", desc: "Speak your sales every evening", key: "voice" },
+                      { icon: "📊", title: "Industry Benchmarks", desc: "Start with smart averages", key: "benchmark", recommended: true },
+                      { icon: "📷", title: "Bill Scan (OCR)", desc: "Upload your paper bills", key: "ocr" },
+                      { icon: "🎙️", title: "Voice Journal", desc: "Tell us your sales daily", key: "voice" },
                     ].map((option) => (
                       <button
                         key={option.key}
                         onClick={() => handleFinish(option.key)}
-                        className={`w-full text-left p-5 rounded-xl border-2 transition-all hover:shadow-lg active:scale-[0.98] ${
+                        className={`w-full text-left p-6 rounded-3xl border-2 transition-all hover:shadow-2xl active:scale-[0.98] relative overflow-hidden group ${
                           option.recommended 
-                            ? "border-cyan-500/50 bg-cyan-500/10" 
-                            : "border-cyan-500/20 bg-transparent hover:bg-cyan-500/5"
+                            ? "border-cyan-500/50 bg-cyan-500/5" 
+                            : "border-white/5 bg-white/2 hover:bg-white/10"
                         }`}
                       >
-                        <div className="flex items-start gap-4">
-                          <span className="text-3xl">{option.icon}</span>
+                        <div className="flex items-center gap-5">
+                          <span className="text-4xl group-hover:scale-110 transition-transform">{option.icon}</span>
                           <div>
-                            <p className="font-semibold text-lg text-cyan-400">{option.title}</p>
-                            <p className="text-sm text-gray-400 mt-1">{option.desc}</p>
-                            {option.recommended && (
-                              <span className="inline-block mt-2 text-xs font-bold text-cyan-300 bg-cyan-500/20 px-3 py-1 rounded-full">
-                                Recommended
-                              </span>
-                            )}
+                            <p className="font-bold text-lg text-white">{option.title}</p>
+                            <p className="text-sm text-gray-400">{option.desc}</p>
                           </div>
                         </div>
+                        {option.recommended && (
+                          <div className="absolute top-0 right-0 bg-cyan-500 text-black text-[10px] font-black px-3 py-1 rounded-bl-xl uppercase tracking-tighter">
+                            Best Choice
+                          </div>
+                        )}
                       </button>
                     ))}
                   </div>
+                  
+                  <div className="text-center pt-4">
+                    <button onClick={() => setStep(1)} className="text-gray-500 hover:text-white transition-colors text-sm font-bold">
+                      ← Go Back
+                    </button>
+                  </div>
                 </>
               )}
+            </div>
             </div>
           </div>
         </div>

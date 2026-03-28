@@ -174,174 +174,202 @@ export default function LoginPage() {
         )}
       </header>
 
-      <main className="relative z-10 min-h-screen px-6 py-8 max-w-lg mx-auto flex items-center justify-center">
-        <div className="w-full pt-16">
+      <main className="relative z-10 min-h-screen px-6 py-16 max-w-lg mx-auto flex items-center justify-center w-full overflow-hidden">
+        <div className="w-full">
           <style>{`
-            .clay-card {
-              background: var(--card-bg);
-              border-radius: 24px;
-              padding: 48px;
-              box-shadow: var(--clay-shadow);
+            .auth-container {
+              background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(168, 85, 247, 0.1) 100%);
+              padding: 12px;
+              border-radius: 54px;
+              box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+              transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+              width: 100%;
+            }
+
+            .auth-container:hover {
+              transform: translateY(-12px) scale(1.01);
+              box-shadow: 0 35px 60px -15px rgba(0, 0, 0, 0.6);
+            }
+
+            .auth-card {
+              background: rgba(30, 27, 75, 0.85);
+              border-radius: 48px;
+              padding: 56px 48px;
+              box-shadow: 
+                inset 2px 2px 6px rgba(255, 255, 255, 0.1),
+                inset -2px -2px 6px rgba(0, 0, 0, 0.4),
+                0 10px 30px rgba(0, 0, 0, 0.3);
+              backdrop-filter: blur(24px);
               border: 1px solid rgba(255, 255, 255, 0.08);
-              backdrop-filter: blur(10px);
+              width: 100%;
+              position: relative;
+              overflow: hidden;
             }
 
-            [data-theme="dark"] .clay-card {
-              background: rgba(74, 61, 127, 0.4);
+            [data-theme="light"] .auth-card {
+              background: #f8fafc;
               box-shadow: 
-                12px 12px 24px rgba(0, 0, 0, 0.4),
-                -12px -12px 24px rgba(0, 212, 255, 0.1),
-                inset 0 0 0 1px rgba(0, 212, 255, 0.1);
+                12px 12px 24px #d1d9e6, 
+                -12px -12px 24px #ffffff,
+                inset 2px 2px 4px rgba(255,255,255,0.8);
+              border: none;
             }
 
-            [data-theme="light"] .clay-card {
-              background: rgba(243, 245, 249, 0.8);
-              box-shadow: 
-                12px 12px 24px rgba(0, 102, 255, 0.1),
-                -12px -12px 24px rgba(255, 100, 220, 0.05),
-                inset 4px 4px 8px rgba(0, 0, 0, 0.05),
-                inset -4px -4px 8px rgba(255, 255, 255, 0.8);
+            [data-theme="light"] .auth-container {
+              background: transparent;
+              box-shadow: none;
+              padding: 0;
             }
 
             .clay-input {
               background: rgba(255, 255, 255, 0.05) !important;
-              border: 1.5px solid rgba(0, 212, 255, 0.2) !important;
-              border-radius: 16px !important;
-              padding: 14px 18px !important;
+              border: 2px solid rgba(255, 255, 255, 0.1) !important;
+              border-radius: 20px !important;
+              padding: 16px 24px !important;
               font-size: 16px !important;
+              color: white !important;
               transition: all 0.3s ease !important;
-              box-shadow: inset 2px 2px 4px rgba(0, 0, 0, 0.1),
-                          inset -2px -2px 4px rgba(255, 255, 255, 0.05) !important;
+              box-shadow: inset 2px 2px 4px rgba(0,0,0,0.2) !important;
             }
 
-            .clay-input::placeholder {
-              color: rgba(160, 166, 181, 0.7) !important;
+            [data-theme="light"] .clay-input {
+              background: #f1f5f9 !important;
+              border: none !important;
+              color: #1e293b !important;
+              box-shadow: inset 2px 2px 5px #d1d9e6, inset -2px -2px 5px #ffffff !important;
             }
 
             .clay-input:focus {
               border-color: #00d4ff !important;
               background: rgba(255, 255, 255, 0.08) !important;
-              box-shadow: inset 2px 2px 4px rgba(0, 0, 0, 0.1),
-                          inset -2px -2px 4px rgba(255, 255, 255, 0.05),
-                          0 0 20px rgba(0, 212, 255, 0.3) !important;
+              transform: scale(1.01);
+              box-shadow: 0 0 20px rgba(0, 212, 255, 0.15), inset 2px 2px 4px rgba(0,0,0,0.2) !important;
+            }
+
+            [data-theme="light"] .clay-input:focus {
+              border-color: #6366f1 !important;
+              background: #e0e7ff !important;
+              box-shadow: inset 2px 2px 5px #d1d9e6, inset -2px -2px 5px #ffffff, 0 0 15px rgba(99, 102, 241, 0.2) !important;
             }
 
             .clay-button {
-              background: linear-gradient(135deg, #00d4ff 0%, #6d28d9 100%) !important;
-              border-radius: 16px !important;
-              padding: 14px 28px !important;
-              font-size: 16px !important;
-              font-weight: 600 !important;
-              border: 1px solid rgba(0, 212, 255, 0.3) !important;
-              box-shadow: 0 8px 32px rgba(0, 212, 255, 0.25),
-                          inset 1px 1px 2px rgba(255, 255, 255, 0.2) !important;
-              transition: all 0.3s ease !important;
+              background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%) !important;
+              border-radius: 20px !important;
+              padding: 18px 32px !important;
+              font-size: 18px !important;
+              font-weight: 800 !important;
+              border: none !important;
+              box-shadow: 0 10px 25px rgba(99, 102, 241, 0.4), inset 2px 2px 4px rgba(255,255,255,0.3) !important;
+              transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+              color: white !important;
             }
 
             .clay-button:hover {
-              box-shadow: 0 12px 40px rgba(0, 212, 255, 0.35),
-                          inset 1px 1px 2px rgba(255, 255, 255, 0.3) !important;
-              transform: translateY(-2px) !important;
+              transform: translateY(-4px) scale(1.02) !important;
+              box-shadow: 0 15px 35px rgba(99, 102, 241, 0.5), inset 2px 2px 4px rgba(255,255,255,0.4) !important;
+              filter: brightness(1.1);
             }
 
-            .clay-button:active {
-              transform: translateY(0) !important;
+            [data-theme="light"] .clay-button {
+              background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%) !important;
+              box-shadow: 0 10px 25px rgba(99, 102, 241, 0.3), inset 2px 2px 4px rgba(255,255,255,0.3) !important;
+              color: white !important;
             }
 
-            .clay-button:disabled {
-              opacity: 0.5 !important;
-              cursor: not-allowed !important;
-            }
-
-            .clay-label {
-              font-size: 15px !important;
-              font-weight: 600 !important;
-              color: var(--trae-text-primary) !important;
-              margin-bottom: 8px !important;
-              display: block !important;
+            [data-theme="light"] .clay-button:hover {
+              transform: translateY(-4px) scale(1.02) !important;
+              box-shadow: 0 15px 35px rgba(99, 102, 241, 0.4), inset 2px 2px 4px rgba(255,255,255,0.4) !important;
+              filter: brightness(1.05);
             }
 
             .section-title {
-              font-size: 32px !important;
-              font-weight: 700 !important;
-              color: var(--trae-text-primary) !important;
-              margin-bottom: 24px !important;
+              font-size: 36px !important;
+              font-weight: 900 !important;
+              background: linear-gradient(to bottom right, #fff, #94a3b8);
+              -webkit-background-clip: text;
+              -webkit-text-fill-color: transparent;
+              margin-bottom: 12px !important;
             }
 
-            .section-subtitle {
-              font-size: 16px !important;
-              color: var(--trae-text-secondary) !important;
-              margin-bottom: 24px !important;
+            [data-theme="light"] .section-title {
+              background: linear-gradient(to bottom right, #1e293b, #64748b);
+              -webkit-background-clip: text;
+              -webkit-text-fill-color: transparent;
+            }
+
+            .sign-up-link {
+              text-align: center;
+              margin-bottom: 32px;
+              font-size: 15px;
+              color: var(--trae-text-secondary);
+            }
+
+            .sign-up-link a {
+              color: #00d4ff;
+              font-weight: 800;
+              text-decoration: none;
+              transition: all 0.3s ease;
+              padding: 6px 16px;
+              border-radius: 16px;
+              background: rgba(0, 212, 255, 0.1);
+            }
+
+            .sign-up-link a:hover {
+              background: rgba(0, 212, 255, 0.2);
+              box-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
+              transform: translateY(-2px);
+            }
+
+            .error-message {
+              background: rgba(239, 68, 68, 0.1);
+              border: 1px solid rgba(239, 68, 68, 0.5);
+              border-radius: 12px;
+              padding: 12px 16px;
+              margin-bottom: 20px;
+              color: #ff6b6b;
+              font-size: 14px;
+              font-weight: 600;
+              animation: slideDown 0.3s ease-out;
+            }
+
+            @keyframes slideDown {
+              from {
+                opacity: 0;
+                transform: translateY(-10px);
+              }
+              to {
+                opacity: 1;
+                transform: translateY(0);
+              }
+            }
+
+            [data-theme="light"] .error-message {
+              background: rgba(239, 68, 68, 0.05);
+              border: 1px solid rgba(239, 68, 68, 0.3);
+              color: #dc2626;
             }
           `}</style>
 
-          <div className="clay-card">
-            <div className="space-y-5">
+          <div className="sign-up-link">
+            Don't have an account?{" "}
+            <Link href="/onboard">Sign Up</Link>
+          </div>
+
+          <div className="auth-container">
+            <div className="auth-card">
               <div className="text-center">
                 <h2 className="section-title">Welcome Back</h2>
-                <p className="section-subtitle">Sign in to your BizVaani account</p>
+                <p className="text-gray-400 text-sm font-medium">Sign in to your shop dashboard</p>
               </div>
 
-              {error && (
-                <div className="bg-red-500/20 border border-red-500/40 text-red-200 px-5 py-4 rounded-2xl text-sm font-medium">
-                  {error}
-                </div>
-              )}
+              {error && <div className="error-message">{error}</div>}
 
-              <form onSubmit={handleLogin} className="space-y-5">
-                <div className="space-y-2">
-                  <label className="clay-label">Phone</label>
-                  <input
-                    type="tel"
-                    placeholder="10-digit phone number"
-                    value={form.phone}
-                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                    className="w-full clay-input"
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="clay-label">Password</label>
-                  <input
-                    type="password"
-                    placeholder="Your password"
-                    value={form.password}
-                    onChange={(e) => setForm({ ...form, password: e.target.value })}
-                    className="w-full clay-input"
-                    required
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full py-4 clay-button text-white mt-6"
-                >
-                  {loading ? "Signing in..." : "Sign In"}
+              <div className="space-y-5">
+                <input placeholder="Phone Number" value={form.phone} onChange={(e) => { setError(""); setForm({ ...form, phone: e.target.value }); }} className="w-full clay-input" />
+                <input placeholder="Password" type="password" value={form.password} onChange={(e) => { setError(""); setForm({ ...form, password: e.target.value }); }} className="w-full clay-input" />
+                <button onClick={handleLogin} disabled={loading} className="w-full py-4 clay-button">
+                  {loading ? "Signing In..." : "Sign In"}
                 </button>
-              </form>
-
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-400/20"></div>
-                </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="px-3 bg-inherit text-gray-500 text-sm font-medium">Don't have an account?</span>
-                </div>
-              </div>
-
-              <Link
-                href="/onboard"
-                className="w-full block text-center py-4 border-2 border-orange-500 text-orange-500 font-bold rounded-2xl hover:bg-orange-500/10 transition-all text-base"
-              >
-                Create Account
-              </Link>
-
-              <div className="text-center pt-2">
-                <Link href="/" className="text-orange-500 hover:text-orange-400 font-medium text-sm">
-                  Back to Home
-                </Link>
               </div>
             </div>
           </div>
