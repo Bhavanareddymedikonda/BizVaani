@@ -33,7 +33,7 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-      data-theme="light"
+      data-theme="dark"
       data-accent="orange"
     >
       <body className="min-h-full flex flex-col md:pl-24">

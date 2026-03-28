@@ -10,21 +10,6 @@ import { login } from "@/lib/api";
 // ============================================================
 function ParticleCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [theme, setTheme] = useState<"light" | "dark">("dark");
-
-  useEffect(() => {
-    setTheme(
-      (localStorage.getItem("theme") as "light" | "dark") || "dark"
-    );
-    const handleThemeChange = () => {
-      setTheme(
-        (localStorage.getItem("theme") as "light" | "dark") || "dark"
-      );
-    };
-    window.addEventListener("storage", handleThemeChange);
-    return () => window.removeEventListener("storage", handleThemeChange);
-  }, []);
-
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -61,8 +46,7 @@ function ParticleCanvas() {
       if (!animating) return;
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      const bgColor = theme === "dark" ? "rgba(74, 61, 127, 0)" : "rgba(245, 247, 252, 0)";
-      ctx.fillStyle = bgColor;
+      ctx.fillStyle = "rgba(74, 61, 127, 0)";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       particles.forEach((p) => {
@@ -74,8 +58,7 @@ function ParticleCanvas() {
         if (p.y < 0) p.y = canvas.height;
         if (p.y > canvas.height) p.y = 0;
 
-        const color = theme === "dark" ? `rgba(0, 212, 255, ${p.opacity})` : `rgba(0, 102, 255, ${p.opacity})`;
-        ctx.fillStyle = color;
+        ctx.fillStyle = `rgba(0, 212, 255, ${p.opacity})`;
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
         ctx.fill();
@@ -94,15 +77,13 @@ function ParticleCanvas() {
       animating = false;
       window.removeEventListener("resize", handleResize);
     };
-  }, [theme]);
+  }, []);
 
   return <canvas ref={canvasRef} className="fixed inset-0 z-0 pointer-events-none" />;
 }
 
 export default function LoginPage() {
   const router = useRouter();
-  const [theme, setTheme] = useState<"light" | "dark">("dark");
-  const [mounted, setMounted] = useState(false);
   const [form, setForm] = useState({
     phone: "",
     password: "",
@@ -111,25 +92,12 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
-    const savedTheme = localStorage.getItem("theme") as "light" | "dark" | null;
-    const initialTheme = savedTheme || "dark";
-    setTheme(initialTheme);
-    document.documentElement.setAttribute("data-theme", initialTheme);
-
     // Check if user is already logged in
     const token = localStorage.getItem("bv_token");
     if (token) {
       router.push("/dashboard");
     }
   }, [router]);
-
-  const toggleTheme = () => {
-    const newTheme = theme === "light" ? "dark" : "light";
-    setTheme(newTheme);
-    localStorage.setItem("theme", newTheme);
-    document.documentElement.setAttribute("data-theme", newTheme);
-  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -161,19 +129,11 @@ export default function LoginPage() {
       <div className="glow-sphere glow-sphere-1" />
       <div className="glow-sphere glow-sphere-2" />
 
-      {/* Fixed Header with Theme Toggle */}
+      {/* Fixed Header */}
       <header className="fixed top-0 left-0 right-0 z-50 flex justify-between items-center px-6 py-4 backdrop-blur-sm bg-white/5">
         <h1 className="text-xl font-bold bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-transparent">
           BizVaani
         </h1>
-        {mounted && (
-          <button
-            onClick={toggleTheme}
-            className="theme-toggle"
-            aria-label="Toggle theme"
-            title={theme === "light" ? "Switch to Dark Mode" : "Switch to Light Mode"}
-          />
-        )}
       </header>
 
       <main className="relative z-10 min-h-screen px-6 py-16 max-w-lg mx-auto flex items-center justify-center w-full overflow-hidden">
@@ -353,7 +313,7 @@ export default function LoginPage() {
           `}</style>
 
           <div className="sign-up-link">
-            Don't have an account?{" "}
+            Don&apos;t have an account?{" "}
             <Link href="/onboard">Sign Up</Link>
           </div>
 
@@ -380,5 +340,9 @@ export default function LoginPage() {
     </>
   );
 }
+
+
+
+
 
 

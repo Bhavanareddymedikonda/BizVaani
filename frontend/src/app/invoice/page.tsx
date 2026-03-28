@@ -5,7 +5,7 @@
 // See: APP_FLOW.md (Flow 7), BizVaani_Developer_Reference.md (Section 5)
 // ============================================================
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { generateInvoice } from "@/lib/api";
 import InvoicePreview from "@/components/InvoicePreview";
 import BottomNav from "@/components/BottomNav";
@@ -27,21 +27,6 @@ export default function InvoicePage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [result, setResult] = useState<any>(null);
   const [loading, setLoading] = useState(false);
-  const [theme, setTheme] = useState<'light' | 'dark'>('dark');
-
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
-    const initialTheme = savedTheme || 'dark';
-    setTheme(initialTheme);
-    document.documentElement.setAttribute('data-theme', initialTheme);
-  }, []);
-
-  const toggleTheme = () => {
-    const newTheme = theme === 'light' ? 'dark' : 'light';
-    setTheme(newTheme);
-    localStorage.setItem('theme', newTheme);
-    document.documentElement.setAttribute('data-theme', newTheme);
-  };
 
   const addItem = () => {
     setItems([...items, { product: "", qty: 0, unit_price: 0, gst_rate: 5 }]);
@@ -78,17 +63,6 @@ export default function InvoicePage() {
             <Receipt className="text-[#c084fc]" size={28} /> GST <span className="text-[#c084fc]">Invoice</span>
           </h1>
         </div>
-        <button
-          onClick={toggleTheme}
-          aria-label="Toggle theme"
-          title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
-          className="w-12 h-7 rounded-full bg-white/5 border border-white/10 relative flex items-center p-1 cursor-pointer transition-colors hover:bg-[#c084fc]/20 mt-4 md:mt-0"
-        >
-          <span
-            className="w-5 h-5 rounded-full bg-gradient-to-br from-[#9333ea] to-[#c084fc] shadow-[0_0_8px_rgba(192,132,252,0.6)] block transition-transform"
-            style={{ transform: theme === 'dark' ? 'translateX(0)' : 'translateX(20px)' }}
-          />
-        </button>
       </header>
 
       <main className="px-4 md:px-12 max-w-4xl mx-auto md:ml-20 py-2">

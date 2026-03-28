@@ -11,17 +11,9 @@ type Severity = "ALL" | "HIGH" | "MEDIUM" | "LOW";
 export default function AlertsPage() {
   const [alerts, setAlerts] = useState<RiskAlert[]>([]);
   const [filter, setFilter] = useState<Severity>("ALL");
-  const [theme, setTheme] = useState<"light" | "dark">("dark");
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState("");
-
-  useEffect(() => {
-    const savedTheme = localStorage.getItem("theme") as "light" | "dark" | null;
-    const initialTheme = savedTheme || "dark";
-    setTheme(initialTheme);
-    document.documentElement.setAttribute("data-theme", initialTheme);
-  }, []);
 
   useEffect(() => {
     async function loadCurrentAlerts() {
@@ -44,13 +36,6 @@ export default function AlertsPage() {
 
     return () => window.clearInterval(interval);
   }, []);
-
-  const toggleTheme = () => {
-    const nextTheme = theme === "light" ? "dark" : "light";
-    setTheme(nextTheme);
-    localStorage.setItem("theme", nextTheme);
-    document.documentElement.setAttribute("data-theme", nextTheme);
-  };
 
   const filteredAlerts = useMemo(
     () => (filter === "ALL" ? alerts : alerts.filter((alert) => alert.severity === filter)),
@@ -106,17 +91,6 @@ export default function AlertsPage() {
             {running ? "Running..." : "Run Job Now"}
           </button>
 
-          <button
-            onClick={toggleTheme}
-            aria-label="Toggle theme"
-            title={theme === "light" ? "Switch to Dark Mode" : "Switch to Light Mode"}
-            className="relative flex h-7 w-12 items-center rounded-full border border-white/10 bg-white/5 p-1 transition-colors hover:bg-[#c084fc]/20"
-          >
-            <span
-              className="block h-5 w-5 rounded-full bg-gradient-to-br from-[#9333ea] to-[#c084fc] shadow-[0_0_8px_rgba(192,132,252,0.6)] transition-transform"
-              style={{ transform: theme === "dark" ? "translateX(0)" : "translateX(20px)" }}
-            />
-          </button>
         </div>
       </header>
 

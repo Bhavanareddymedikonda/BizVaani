@@ -5,7 +5,7 @@
 // See: APP_FLOW.md (Flow 4 - CSV Post-Onboarding)
 // ============================================================
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { uploadCSV, confirmCSVImport } from "@/lib/api";
 import BottomNav from "@/components/BottomNav";
 import MicFAB from "@/components/MicFAB";
@@ -17,21 +17,6 @@ export default function SettingsPage() {
   const [csvPreview, setCsvPreview] = useState<any>(null);
   const [csvUploading, setCsvUploading] = useState(false);
   const [importDone, setImportDone] = useState(false);
-  const [theme, setTheme] = useState<'light' | 'dark'>('dark');
-
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
-    const initialTheme = savedTheme || 'dark';
-    setTheme(initialTheme);
-    document.documentElement.setAttribute('data-theme', initialTheme);
-  }, []);
-
-  const toggleTheme = () => {
-    const newTheme = theme === 'light' ? 'dark' : 'light';
-    setTheme(newTheme);
-    localStorage.setItem('theme', newTheme);
-    document.documentElement.setAttribute('data-theme', newTheme);
-  };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -67,17 +52,6 @@ export default function SettingsPage() {
             <Settings className="text-[#c084fc]" size={28} /> Shop <span className="text-[#c084fc]">Settings</span>
           </h1>
         </div>
-        <button
-          onClick={toggleTheme}
-          aria-label="Toggle theme"
-          title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
-          className="w-12 h-7 rounded-full bg-white/5 border border-white/10 relative flex items-center p-1 cursor-pointer transition-colors hover:bg-[#c084fc]/20 mt-4 md:mt-0"
-        >
-          <span
-            className="w-5 h-5 rounded-full bg-gradient-to-br from-[#9333ea] to-[#c084fc] shadow-[0_0_8px_rgba(192,132,252,0.6)] block transition-transform"
-            style={{ transform: theme === 'dark' ? 'translateX(0)' : 'translateX(20px)' }}
-          />
-        </button>
       </header>
 
       <main className="px-4 md:px-12 max-w-4xl mx-auto md:ml-20 py-2 space-y-6">

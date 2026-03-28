@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 
 export type Theme = "light" | "dark";
 export type Accent = "orange" | "teal" | "blue";
@@ -15,32 +16,37 @@ interface ThemeContextProps {
 
 const ThemeContext = createContext<ThemeContextProps | undefined>(undefined);
 
+function getInitialTheme(): Theme {
+  if (typeof window === "undefined") return "dark";
+  if (window.location.pathname !== "/") return "dark";
+  const storedTheme = (localStorage.getItem("theme") as Theme | null) || (localStorage.getItem("bv_theme") as Theme | null);
+  if (storedTheme === "light" || storedTheme === "dark") return storedTheme;
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+
+function getInitialAccent(): Accent {
+  if (typeof window === "undefined") return "orange";
+  const storedAccent = localStorage.getItem("bv_accent");
+  return storedAccent === "teal" || storedAccent === "blue" || storedAccent === "orange" ? storedAccent : "orange";
+}
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>("light");
-  const [accent, setAccent] = useState<Accent>("orange");
-  const [mounted, setMounted] = useState(false);
+  const pathname = usePathname();
+  const isLandingPage = pathname === "/";
+  const [theme, setTheme] = useState<Theme>(getInitialTheme);
+  const [accent, setAccent] = useState<Accent>(getInitialAccent);
+  const mounted = true;
 
   useEffect(() => {
-    // Only run on client
-    const storedTheme = localStorage.getItem("bv_theme") as Theme;
-    const storedAccent = localStorage.getItem("bv_accent") as Accent;
-
-    if (storedTheme) setTheme(storedTheme);
-    else if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
-      setTheme("dark");
-    }
-
-    if (storedAccent) setAccent(storedAccent);
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (!mounted) return;
-    document.documentElement.setAttribute("data-theme", theme);
+    const enforcedTheme: Theme = isLandingPage ? theme : "dark";
+    document.documentElement.setAttribute("data-theme", enforcedTheme);
     document.documentElement.setAttribute("data-accent", accent);
-    localStorage.setItem("bv_theme", theme);
+    localStorage.setItem("bv_theme", enforcedTheme);
     localStorage.setItem("bv_accent", accent);
-  }, [theme, accent, mounted]);
+    if (isLandingPage) {
+      localStorage.setItem("theme", theme);
+    }
+  }, [accent, isLandingPage, mounted, theme]);
 
   return (
     <ThemeContext.Provider value={{ theme, accent, setTheme, setAccent, mounted }}>

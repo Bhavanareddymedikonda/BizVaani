@@ -8,7 +8,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { register } from "@/lib/api";
+import { register, type AuthResponse } from "@/lib/api";
 
 const CATEGORIES = ["Grains", "Dairy", "FMCG", "Vegetables", "General"];
 
@@ -17,21 +17,6 @@ const CATEGORIES = ["Grains", "Dairy", "FMCG", "Vegetables", "General"];
 // ============================================================
 function ParticleCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [theme, setTheme] = useState<"light" | "dark">("dark");
-
-  useEffect(() => {
-    setTheme(
-      (localStorage.getItem("theme") as "light" | "dark") || "dark"
-    );
-    const handleThemeChange = () => {
-      setTheme(
-        (localStorage.getItem("theme") as "light" | "dark") || "dark"
-      );
-    };
-    window.addEventListener("storage", handleThemeChange);
-    return () => window.removeEventListener("storage", handleThemeChange);
-  }, []);
-
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -68,8 +53,7 @@ function ParticleCanvas() {
       if (!animating) return;
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      const bgColor = theme === "dark" ? "rgba(10, 14, 39, 0)" : "rgba(245, 247, 252, 0)";
-      ctx.fillStyle = bgColor;
+      ctx.fillStyle = "rgba(10, 14, 39, 0)";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       particles.forEach((p) => {
@@ -81,8 +65,7 @@ function ParticleCanvas() {
         if (p.y < 0) p.y = canvas.height;
         if (p.y > canvas.height) p.y = 0;
 
-        const color = theme === "dark" ? `rgba(0, 212, 255, ${p.opacity})` : `rgba(0, 102, 255, ${p.opacity})`;
-        ctx.fillStyle = color;
+        ctx.fillStyle = `rgba(0, 212, 255, ${p.opacity})`;
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
         ctx.fill();
@@ -101,7 +84,7 @@ function ParticleCanvas() {
       animating = false;
       window.removeEventListener("resize", handleResize);
     };
-  }, [theme]);
+  }, []);
 
   return <canvas ref={canvasRef} className="fixed inset-0 z-0 pointer-events-none" />;
 }
@@ -109,8 +92,6 @@ function ParticleCanvas() {
 export default function OnboardPage() {
   const router = useRouter();
   const [step, setStep] = useState(1);
-  const [theme, setTheme] = useState<"light" | "dark">("dark");
-  const [mounted, setMounted] = useState(false);
   const [error, setError] = useState("");
   const [form, setForm] = useState({
     name: "",
@@ -149,55 +130,34 @@ export default function OnboardPage() {
       setError("Please enter your state");
       return;
     }
-    if (form.categories.length === 0) {
-      setError("Please select at least one business category");
-      return;
-    }
     setError("");
     setStep(2);
-  };
-
-  useEffect(() => {
-    setMounted(true);
-    const savedTheme = localStorage.getItem("theme") as "light" | "dark" | null;
-    const initialTheme = savedTheme || "dark";
-    setTheme(initialTheme);
-    document.documentElement.setAttribute("data-theme", initialTheme);
-  }, []);
-
-  const toggleTheme = () => {
-    const newTheme = theme === "light" ? "dark" : "light";
-    setTheme(newTheme);
-    localStorage.setItem("theme", newTheme);
-    document.documentElement.setAttribute("data-theme", newTheme);
   };
 
   const handleFinish = async (dataPath: string) => {
     // Final validation before registration
     if (!form.name.trim() || !form.phone.trim() || !form.password.trim() || 
-        !form.shop_name.trim() || !form.city.trim() || !form.state.trim() || 
-        form.categories.length === 0) {
+        !form.shop_name.trim() || !form.city.trim() || !form.state.trim()) {
       setError("Please fill in all required fields");
       return;
     }
 
     try {
-      const res = await register({
+      const res: AuthResponse = await register({
         ...form,
-        categories: form.categories,
+        categories: form.categories.length > 0 ? form.categories : ["general"],
       });
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      localStorage.setItem("bv_token", (res as any).access_token);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      localStorage.setItem("bv_user", JSON.stringify((res as any).user));
-      localStorage.setItem("bv_shop", JSON.stringify((res as any).shop));
+      localStorage.setItem("bv_token", res.access_token);
+      localStorage.setItem("bv_user", JSON.stringify(res.user));
+      localStorage.setItem("bv_shop", JSON.stringify(res.shop));
 
       console.log("Data path selected:", dataPath);
       setError("");
       router.push("/dashboard");
-    } catch (err: any) {
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Registration failed. Please check your inputs.";
       console.error("Registration failed:", err);
-      alert(err.message || "Registration failed. Please check your inputs.");
+      alert(message);
       setError("Registration failed. Please try again.");
     }
   };
@@ -220,19 +180,11 @@ export default function OnboardPage() {
       <div className="glow-sphere glow-sphere-1" />
       <div className="glow-sphere glow-sphere-2" />
       
-      {/* Fixed Header with Theme Toggle */}
+      {/* Fixed Header */}
       <header className="fixed top-0 left-0 right-0 z-50 flex justify-between items-center px-6 py-4 backdrop-blur-sm bg-white/5">
         <h1 className="text-xl font-bold bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-transparent">
           BizVaani
         </h1>
-        {mounted && (
-          <button
-            onClick={toggleTheme}
-            className="theme-toggle"
-            aria-label="Toggle theme"
-            title={theme === "light" ? "Switch to Dark Mode" : "Switch to Light Mode"}
-          />
-        )}
       </header>
 
       <main className="relative z-10 min-h-screen px-6 py-16 max-w-lg mx-auto flex items-center justify-center w-full overflow-hidden">
@@ -539,10 +491,23 @@ export default function OnboardPage() {
 
                     {/* Categories */}
                     <div className="space-y-3">
-                      <label className="clay-label">Business Categories</label>
+                      <div className="flex items-center justify-between gap-3">
+                        <label className="clay-label">Business Categories</label>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setError("");
+                            setStep(2);
+                          }}
+                          className="text-xs font-bold uppercase tracking-[0.2em] text-cyan-300/80 transition-colors hover:text-cyan-200"
+                        >
+                          Skip for now
+                        </button>
+                      </div>
                       <div className="flex flex-wrap gap-2">
                         {CATEGORIES.map((cat) => (
                           <button
+                            type="button"
                             key={cat}
                             onClick={() => toggleCategory(cat.toLowerCase())}
                             className={`category-button ${
@@ -555,7 +520,7 @@ export default function OnboardPage() {
                       </div>
                     </div>
 
-                    <button onClick={handleNext} className="w-full py-4 clay-button mt-6">
+                    <button type="button" onClick={handleNext} className="w-full py-4 clay-button mt-6">
                       Continue →
                     </button>
                   </div>
@@ -615,5 +580,8 @@ export default function OnboardPage() {
     </>
   );
 }
+
+
+
 
 
