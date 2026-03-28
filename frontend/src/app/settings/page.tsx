@@ -8,6 +8,7 @@
 import { useState, useEffect } from "react";
 import { uploadCSV, confirmCSVImport } from "@/lib/api";
 import BottomNav from "@/components/BottomNav";
+import MicFAB from "@/components/MicFAB";
 import { Settings, UploadCloud, CheckCircle2 } from "lucide-react";
 
 export default function SettingsPage() {
@@ -173,6 +174,7 @@ export default function SettingsPage() {
         </section>
       </main>
 
+      <MicFAB />
       <BottomNav />
     </div>
   );
