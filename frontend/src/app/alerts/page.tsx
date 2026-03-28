@@ -13,14 +13,20 @@ import MicFAB from "@/components/MicFAB";
 
 type Severity = "ALL" | "HIGH" | "MEDIUM" | "LOW";
 
+// Sample alerts shown when store is not yet hydrated
+const SAMPLE_ALERTS = [
+  { id: 1, product_name: "Rice", severity: "HIGH" as const, message: "Sales dropped 22% — competitor undercut by ₹2", created_at: "2026-03-27T06:00:00" },
+  { id: 2, product_name: "Atta", severity: "MEDIUM" as const, message: "Restock needed in 4 days based on AI forecast", created_at: "2026-03-27T06:00:00" },
+  { id: 3, product_name: "Sugar", severity: "HIGH" as const, message: "Mandi price spiked 18% — consider buying in bulk now", created_at: "2026-03-27T08:00:00" },
+  { id: 4, product_name: "Cooking Oil", severity: "LOW" as const, message: "Price stable. Stock levels healthy for next 12 days.", created_at: "2026-03-27T08:00:00" },
+];
+
 export default function AlertsPage() {
-  const { alerts } = useShopStore();
+  const { alerts: storeAlerts } = useShopStore();
   const [filter, setFilter] = useState<Severity>("ALL");
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
-  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
     const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
     const initialTheme = savedTheme || 'dark';
     setTheme(initialTheme);
@@ -34,96 +40,79 @@ export default function AlertsPage() {
     document.documentElement.setAttribute('data-theme', newTheme);
   };
 
+  // Use store alerts if hydrated, otherwise show sample data
+  const alerts = storeAlerts && storeAlerts.length > 0 ? storeAlerts : SAMPLE_ALERTS;
   const filtered = filter === "ALL" ? alerts : alerts.filter((a) => a.severity === filter);
 
+  const severityCount = (sev: Severity) =>
+    sev === "ALL" ? alerts.length : alerts.filter((a) => a.severity === sev).length;
+
   return (
-    <main className="min-h-screen bg-gray-50 pb-24">
-      <style>{`
-        .theme-toggle {
-          background: var(--card-bg, #f3f5f9);
-          border: 1px solid var(--card-bg, #f3f5f9);
-          width: 50px;
-          height: 28px;
-          border-radius: 14px;
-          cursor: pointer;
-          position: relative;
-          transition: background 0.3s ease, border-color 0.3s ease;
-          padding: 2px;
-          display: flex;
-          align-items: center;
-          box-shadow: inset 2px 2px 4px var(--clay-inset-shadow), inset -2px -2px 4px var(--clay-inset-high);
-        }
-
-        .theme-toggle::after {
-          content: '';
-          position: absolute;
-          width: 24px;
-          height: 24px;
-          border-radius: 50%;
-          background: linear-gradient(135deg, #0066ff 0%, #5b21b6 100%);
-          transition: left 0.3s ease;
-          left: 2px;
-          box-shadow: 0 2px 8px rgba(0, 102, 255, 0.3);
-        }
-
-        [data-theme="dark"] .theme-toggle::after {
-          background: linear-gradient(135deg, #00d4ff 0%, #6d28d9 100%);
-          box-shadow: 0 2px 8px rgba(0, 212, 255, 0.3);
-        }
-
-        .theme-toggle:hover {
-          border-color: var(--accent);
-          box-shadow: 0 0 15px rgba(0, 102, 255, 0.2), inset 2px 2px 4px var(--clay-inset-shadow);
-        }
-
-        [data-theme="dark"] .theme-toggle:hover {
-          box-shadow: 0 0 15px rgba(0, 212, 255, 0.2), inset 2px 2px 4px var(--clay-inset-shadow);
-        }
-      `}</style>
-      <header className="bg-white px-4 py-4 border-b border-gray-200 flex justify-between items-center">
-        <h1 className="text-xl font-bold text-gray-900">Risk Alerts</h1>
-        <button 
+    <div className="min-h-screen selection:bg-[#c084fc] selection:text-white font-sans pb-24 md:pb-0 pt-20 md:pt-6">
+      <header className="px-4 md:px-12 py-6 mb-4 flex flex-col md:flex-row md:items-center justify-between md:ml-20">
+        <div>
+          <h1 className="text-3xl font-black tracking-wide text-white uppercase">
+            Risk <span className="text-[#c084fc]">Alerts</span>
+          </h1>
+          <p className="font-bold text-xs uppercase tracking-widest text-[#c084fc]/60 mt-1">
+            {alerts.length} active alerts
+          </p>
+        </div>
+        <button
           onClick={toggleTheme}
-          className="theme-toggle"
           aria-label="Toggle theme"
           title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
-        />
+          className="w-12 h-7 rounded-full bg-white/5 border border-white/10 relative flex items-center p-1 cursor-pointer transition-colors hover:bg-[#c084fc]/20 mt-4 md:mt-0"
+        >
+          <span
+            className="w-5 h-5 rounded-full bg-gradient-to-br from-[#9333ea] to-[#c084fc] shadow-[0_0_8px_rgba(192,132,252,0.6)] block transition-transform"
+            style={{ transform: theme === 'dark' ? 'translateX(0)' : 'translateX(20px)' }}
+          />
+        </button>
       </header>
 
-      <div className="px-4 py-4 max-w-lg mx-auto space-y-4">
+      <main className="px-4 md:px-12 max-w-7xl mx-auto md:ml-20 py-2 space-y-6">
         {/* Filter Tabs */}
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-3">
           {(["ALL", "HIGH", "MEDIUM", "LOW"] as Severity[]).map((sev) => (
             <button
               key={sev}
               onClick={() => setFilter(sev)}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+              className={`px-5 py-2 rounded-xl text-xs sm:text-sm font-bold uppercase tracking-wider transition-all ${
                 filter === sev
-                  ? "bg-orange-500 text-white"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  ? "bg-gradient-to-r from-[#9333ea] to-[#4c1d95] text-white shadow-[0_4px_16px_rgba(147,51,234,0.3)] border border-[#c084fc]/30"
+                  : "bg-white/5 text-[#c084fc]/60 hover:bg-white/10 border border-white/10 hover:text-[#c084fc]"
               }`}
             >
               {sev}
+              <span className={`ml-1.5 text-[10px] px-1.5 py-0.5 rounded-full ${filter === sev ? 'bg-white/20' : 'bg-white/5'}`}>
+                {severityCount(sev)}
+              </span>
             </button>
           ))}
         </div>
 
         {/* Alert List */}
         {filtered.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-gray-400">No alerts found</p>
+          <div className="text-center py-16 advanced-card">
+            <p className="text-[#c084fc]/60 font-bold text-lg">No alerts found</p>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
             {filtered.map((alert) => (
-              <AlertCard key={alert.id} alert={alert} />
+              <AlertCard 
+                key={alert.id} 
+                productName={alert.product_name}
+                severity={alert.severity}
+                message={alert.message}
+              />
             ))}
           </div>
         )}
-      </div>
+      </main>
 
       <MicFAB />
-      <BottomNav active="alerts" />
-    </main>
+      <BottomNav />
+    </div>
   );
 }

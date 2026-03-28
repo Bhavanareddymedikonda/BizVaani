@@ -27,7 +27,7 @@
 
 ## 1. What We Are Building
 
-BizVaani is a voice-first AI business coach for Indian kirana and small retail store owners.
+BizVaani is a desktop-first AI business coach for Indian kirana and small retail store owners.
 The owner speaks in Hindi, Telugu, or English.
 The system understands, fetches live market context, runs ML forecasting, and responds with a short, specific recommendation — also spoken back.
 
@@ -55,14 +55,14 @@ The system understands, fetches live market context, runs ML forecasting, and re
 
 ```
 ┌──────────────────────────────────────────────────────────────────────┐
-│                        USER (Mobile Browser)                         │
-│              Voice (Hindi/Telugu/English)  or  Text                  │
+│                       USER (Desktop Web Browser)                      │
+│            Voice (Hindi/Telugu/English) plus rich visual UI          │
 └────────────────────────────┬─────────────────────────────────────────┘
                              │ WebSocket (audio stream)
                              ▼
 ┌──────────────────────────────────────────────────────────────────────┐
 │                       NEXT.JS FRONTEND                               │
-│  Pages: Onboarding · Dashboard · Voice UI · Invoice                  │
+│  Pages: Onboarding · Dashboard · Forecast · Voice Panel · Invoice    │
 │  Hooks: useVoiceCapture · useDashboardSocket                         │
 │  Charts: Recharts (sales trends, profit simulator)                   │
 │  Light API routes: /api/simulate · /api/alerts                       │
@@ -126,8 +126,8 @@ The system understands, fetches live market context, runs ML forecasting, and re
 | Tool | Version | Purpose |
 |------|---------|---------| 
 | Next.js | 14.2.x | App framework, App Router, API routes |
-| Tailwind CSS | 3.4.x | Styling |
-| shadcn/ui | latest | Radix UI primitives, accessible components |
+| Tailwind CSS | 3.4.x | Styling and claymorphism utility layers |
+| Custom design system | latest | Desktop-first claymorphism components and layout primitives |
 | Recharts | 2.12.x | Sales trend charts, profit simulator bars |
 | Zustand | 4.5.x | Voice state + shop data state management |
 | Axios | 1.7.x | REST API calls with JWT interceptors |
@@ -316,7 +316,7 @@ CREATE INDEX idx_invoices_shop_id ON invoices (shop_id);
 ### Flow 1 — First Time Setup (New Owner, No Data)
 
 ```
-1.  Owner opens PWA on mobile
+1.  Owner opens the desktop web app in a browser
 2.  Fills: Name, Phone, Password, Shop Name, City, Category, Language
 3.  POST /api/auth/register → JWT created, shop_id returned, stored in localStorage
 4.  Backend seeds benchmark sales profile (30 days synthetic data)
@@ -956,7 +956,7 @@ regardless of personal sales data. New users still get value on Day 1.
   /onboard/csv/page.tsx      → CSV upload flow
   /onboard/ocr/page.tsx      → Bill photo OCR flow
   /onboard/voice/page.tsx    → Voice-first daily entry flow
-  /dashboard/page.tsx        → Main dashboard
+  /dashboard/page.tsx        → Main desktop dashboard
   /alerts/page.tsx           → Risk alert list
   /forecast/page.tsx         → 7/30-day demand charts
   /inventory/page.tsx        → Stock list + add stock
@@ -971,20 +971,14 @@ regardless of personal sales data. New users still get value on Day 1.
 
 ```
 DashboardLayout
-├── Header (shop name, language toggle)
-├── AlertsPanel
-│   └── AlertCard (🔴🟡🟢 colour-coded)
+├── SidebarNav
+├── Topbar (shop name, filters, language toggle)
+├── KPIClayCards
 ├── SalesTrendChart (Recharts LineChart, 30-day)
-├── VoiceInterface
-│   ├── MicButton (tap to speak)
-│   ├── TranscriptDisplay (live text during speech)
-│   └── AudioPlayer (plays TTS chunks)
-├── RecommendationFeed
-│   ├── RecommendationCard (action + expected impact)
-│   └── ProfitSimulatorChart (Recharts BarChart)
-├── ProductTable (inventory + risk status)
-└── InvoicePanel
-    └── InvoiceDownloadButton
+├── AlertsRail
+├── ProductInsightGrid
+├── VoiceAssistantPanel
+└── InvoiceQuickPanel
 ```
 
 ### Key Hooks
@@ -1223,7 +1217,7 @@ HOUR 35–36   UI polish + demo rehearsal x5
 ## 16. Demo Script (3 Minutes)
 
 ```
-[00:00]  Open PWA on mobile — clean landing screen
+[00:00]  Open the desktop web app — polished claymorphism landing/dashboard shell
 
 [00:15]  "Meet Ramesh — kirana store owner in Nagpur. Zero digital records."
          Register: Name=Ramesh, City=Nagpur, Category=Grocery, Language=Hindi
@@ -1281,5 +1275,5 @@ HOUR 35–36   UI polish + demo rehearsal x5
 10. Run `demo_preload.py` before going on stage.
 11. Test the full voice pipeline at least 10 times the night before.
 12. Have a mock WebSocket fallback ready if internet drops.
-13. Dashboard must be mobile-first — judges will test on phones.
+13. Dashboard must be desktop-first with a polished claymorphism layout for judges on laptops.
 14. Benchmark seed data must load for a brand new registration during the demo.

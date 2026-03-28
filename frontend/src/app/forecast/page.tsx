@@ -20,10 +20,8 @@ export default function ForecastPage() {
   const [forecast, setForecast] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
-  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
     const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
     const initialTheme = savedTheme || 'dark';
     setTheme(initialTheme);
@@ -53,91 +51,60 @@ export default function ForecastPage() {
   }, [selected]);
 
   return (
-    <main className="min-h-screen bg-gray-50 pb-24">
-      <style>{`
-        .theme-toggle {
-          background: var(--card-bg, #f3f5f9);
-          border: 1px solid var(--card-bg, #f3f5f9);
-          width: 50px;
-          height: 28px;
-          border-radius: 14px;
-          cursor: pointer;
-          position: relative;
-          transition: background 0.3s ease, border-color 0.3s ease;
-          padding: 2px;
-          display: flex;
-          align-items: center;
-          box-shadow: inset 2px 2px 4px var(--clay-inset-shadow), inset -2px -2px 4px var(--clay-inset-high);
-        }
-
-        .theme-toggle::after {
-          content: '';
-          position: absolute;
-          width: 24px;
-          height: 24px;
-          border-radius: 50%;
-          background: linear-gradient(135deg, #0066ff 0%, #5b21b6 100%);
-          transition: left 0.3s ease;
-          left: 2px;
-          box-shadow: 0 2px 8px rgba(0, 102, 255, 0.3);
-        }
-
-        [data-theme="dark"] .theme-toggle::after {
-          background: linear-gradient(135deg, #00d4ff 0%, #6d28d9 100%);
-          box-shadow: 0 2px 8px rgba(0, 212, 255, 0.3);
-        }
-
-        .theme-toggle:hover {
-          border-color: var(--accent);
-          box-shadow: 0 0 15px rgba(0, 102, 255, 0.2), inset 2px 2px 4px var(--clay-inset-shadow);
-        }
-
-        [data-theme="dark"] .theme-toggle:hover {
-          box-shadow: 0 0 15px rgba(0, 212, 255, 0.2), inset 2px 2px 4px var(--clay-inset-shadow);
-        }
-      `}</style>
-      <header className="bg-white px-4 py-4 border-b border-gray-200 flex justify-between items-center">
-        <h1 className="text-xl font-bold text-gray-900">Demand Forecast</h1>
-        <button 
+    <div className="min-h-screen selection:bg-[#c084fc] selection:text-white font-sans pb-24 md:pb-0 pt-20 md:pt-6">
+      <header className="px-4 md:px-12 py-6 mb-4 flex flex-col md:flex-row md:items-center justify-between md:ml-20">
+        <h1 className="text-3xl font-black tracking-wide text-white uppercase">
+          Demand <span className="text-[#c084fc]">Forecast</span>
+        </h1>
+        <button
           onClick={toggleTheme}
-          className="theme-toggle"
           aria-label="Toggle theme"
           title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
-        />
+          className="w-12 h-7 rounded-full bg-white/5 border border-white/10 relative flex items-center p-1 cursor-pointer transition-colors hover:bg-[#c084fc]/20 mt-4 md:mt-0"
+        >
+          <span
+            className="w-5 h-5 rounded-full bg-gradient-to-br from-[#9333ea] to-[#c084fc] shadow-[0_0_8px_rgba(192,132,252,0.6)] block transition-transform"
+            style={{ transform: theme === 'dark' ? 'translateX(0)' : 'translateX(20px)' }}
+          />
+        </button>
       </header>
 
-      <div className="px-4 py-4 max-w-lg mx-auto space-y-4">
+      <main className="px-4 md:px-12 max-w-7xl mx-auto md:ml-20 py-2 space-y-6">
         {/* Product Selector */}
         <select
           value={selected}
           onChange={(e) => setSelected(e.target.value)}
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg text-base bg-white"
+          className="w-full max-w-md px-5 py-3 rounded-2xl bg-white/5 border border-white/10 text-white font-bold text-lg focus:outline-none focus:ring-2 focus:ring-[#c084fc]/40 appearance-none backdrop-blur-md"
         >
           {PRODUCTS.map((p) => (
-            <option key={p} value={p}>{p}</option>
+            <option key={p} value={p} className="bg-[#0D0914] text-white">{p}</option>
           ))}
         </select>
 
         {/* Chart */}
         {loading ? (
-          <div className="h-64 bg-gray-200 rounded-xl animate-pulse" />
+          <div className="h-64 advanced-card animate-pulse opacity-40" />
         ) : forecast ? (
-          <>
-            <ForecastChart data={forecast.forecast_7d} productName={forecast.product_name} />
-            {forecast.is_anomaly && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
-                ⚠️ Anomaly detected: {forecast.anomaly_pct.toFixed(1)}% deviation from expected
-              </div>
-            )}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="space-y-6">
+              <ForecastChart data={forecast.forecast_7d} productName={forecast.product_name} />
+              {forecast.is_anomaly && (
+                <div className="advanced-card bg-red-500/10 border border-red-500/30 p-4 text-sm font-bold text-red-400 backdrop-blur-xl">
+                  ⚠️ Anomaly detected: {forecast.anomaly_pct.toFixed(1)}% deviation from expected
+                </div>
+              )}
+            </div>
 
             {/* Profit Simulator */}
-            <ImpactCard />
-          </>
+            <div>
+              <ImpactCard />
+            </div>
+          </div>
         ) : null}
-      </div>
+      </main>
 
       <MicFAB />
-      <BottomNav active="forecast" />
-    </main>
+      <BottomNav />
+    </div>
   );
 }

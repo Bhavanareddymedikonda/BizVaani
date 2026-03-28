@@ -68,6 +68,15 @@ export const MOCK_FORECASTS_BY_PRODUCT: Record<string, typeof MOCK_FORECAST> = {
   Atta: { ...MOCK_FORECAST, product_name: "Atta", forecast_7d: MOCK_FORECAST.forecast_7d.map(f => ({ ...f, predicted_qty: f.predicted_qty - 3, lower_bound: f.lower_bound - 3, upper_bound: f.upper_bound - 3 })), is_anomaly: true, anomaly_pct: -18.5 },
 };
 
+// --- Inventory ---
+export const MOCK_INVENTORY = [
+  { id: 1, name: "Rice", category: "Grains", in_stock: 45, unit: "kg", minimum_required: 100, status: "LOW_STOCK" as const, last_updated: "2026-03-27T10:00:00" },
+  { id: 2, name: "Dal", category: "Grains", in_stock: 120, unit: "kg", minimum_required: 50, status: "IN_STOCK" as const, last_updated: "2026-03-27T09:30:00" },
+  { id: 3, name: "Sugar", category: "Groceries", in_stock: 65, unit: "kg", minimum_required: 30, status: "IN_STOCK" as const, last_updated: "2026-03-27T11:15:00" },
+  { id: 4, name: "Cooking Oil", category: "Groceries", in_stock: 45, unit: "litre", minimum_required: 20, status: "IN_STOCK" as const, last_updated: "2026-03-26T16:00:00" },
+  { id: 5, name: "Atta", category: "Grains", in_stock: 15, unit: "kg", minimum_required: 40, status: "CRITICAL" as const, last_updated: "2026-03-27T08:45:00" },
+];
+
 // --- Market Prices ---
 export const MOCK_MARKET_PRICES = {
   city: "Nagpur",

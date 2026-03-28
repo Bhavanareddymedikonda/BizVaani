@@ -1,166 +1,140 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { getDashboard } from "../../lib/api";
+import ProductCard from "../../components/ProductCard";
+import AlertCard from "../../components/AlertCard";
+import BottomNav from "../../components/BottomNav";
+
 // ============================================================
 // Dashboard Page — Task: Member C
 // See: APP_FLOW.md (Flow 2, 3), FRONTEND_GUIDELINES.md (Section 4)
 // ============================================================
 
-import { useEffect, useState } from "react";
-import { getDashboard } from "@/lib/api";
-import { useShopStore } from "@/store/useShopStore";
-import ProductCard from "@/components/ProductCard";
-import AlertCard from "@/components/AlertCard";
-import BottomNav from "@/components/BottomNav";
-import MicFAB from "@/components/MicFAB";
-
 export default function DashboardPage() {
-  const { shop, products, alerts, totalToday, isLoading, setDashboardData, setLoading } = useShopStore();
-  const [theme, setTheme] = useState<'light' | 'dark'>('dark');
-  const [mounted, setMounted] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [dashboard, setDashboard] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setMounted(true);
-    const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
-    const initialTheme = savedTheme || 'dark';
-    setTheme(initialTheme);
-    document.documentElement.setAttribute('data-theme', initialTheme);
-  }, []);
-
-  const toggleTheme = () => {
-    const newTheme = theme === 'light' ? 'dark' : 'light';
-    setTheme(newTheme);
-    localStorage.setItem('theme', newTheme);
-    document.documentElement.setAttribute('data-theme', newTheme);
-  };
-
-  useEffect(() => {
-    async function load() {
-      setLoading(true);
+    async function loadDashboard() {
       try {
         const data = await getDashboard();
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        setDashboardData(data as any);
+        setDashboard(data);
       } catch (err) {
-        console.error("Failed to load dashboard:", err);
+        console.error("Failed to fetch dashboard:", err);
+      } finally {
+        setLoading(false);
       }
     }
-    load();
-  }, [setDashboardData, setLoading]);
+    loadDashboard();
+  }, []);
 
-  if (isLoading) {
+  if (loading) {
     return (
-      <main className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-pulse space-y-3 w-64">
-          <div className="h-5 bg-gray-200 rounded w-3/4" />
-          <div className="h-4 bg-gray-200 rounded w-1/2" />
-          <div className="h-10 bg-gray-200 rounded" />
-        </div>
-      </main>
+      <div className="min-h-screen selection:bg-[#c084fc] selection:text-white font-sans pb-24 md:pb-0 pt-20 md:pt-6 flex items-center justify-center">
+        <div className="w-12 h-12 rounded-full border-4 border-[#c084fc]/30 border-t-[#c084fc] animate-spin" />
+      </div>
     );
   }
 
+  if (!dashboard) {
+    return (
+      <div className="min-h-screen selection:bg-[#c084fc] selection:text-white font-sans pb-24 md:pb-0 pt-20 md:pt-6 flex flex-col items-center justify-center">
+        <p className="text-[#f87171] mb-4">Error loading dashboard data.</p>
+        <button onClick={() => window.location.reload()} className="advanced-btn px-6 py-2">Retry</button>
+      </div>
+    );
+  }
+  
+  const highOrMediumAlerts = dashboard.alerts?.filter(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (a: any) => a.severity === "HIGH" || a.severity === "MEDIUM"
+  ) || [];
+
   return (
-    <main className="min-h-screen bg-gray-50 pb-24">
-      <style>{`
-        .theme-toggle {
-          background: var(--card-bg, #f3f5f9);
-          border: 1px solid var(--card-bg, #f3f5f9);
-          width: 50px;
-          height: 28px;
-          border-radius: 14px;
-          cursor: pointer;
-          position: relative;
-          transition: background 0.3s ease, border-color 0.3s ease;
-          padding: 2px;
-          display: flex;
-          align-items: center;
-          box-shadow: inset 2px 2px 4px var(--clay-inset-shadow), inset -2px -2px 4px var(--clay-inset-high);
-        }
-
-        .theme-toggle::after {
-          content: '';
-          position: absolute;
-          width: 24px;
-          height: 24px;
-          border-radius: 50%;
-          background: linear-gradient(135deg, #0066ff 0%, #5b21b6 100%);
-          transition: left 0.3s ease;
-          left: 2px;
-          box-shadow: 0 2px 8px rgba(0, 102, 255, 0.3);
-        }
-
-        [data-theme="dark"] .theme-toggle::after {
-          background: linear-gradient(135deg, #00d4ff 0%, #6d28d9 100%);
-          box-shadow: 0 2px 8px rgba(0, 212, 255, 0.3);
-        }
-
-        .theme-toggle:hover {
-          border-color: var(--accent);
-          box-shadow: 0 0 15px rgba(0, 102, 255, 0.2), inset 2px 2px 4px var(--clay-inset-shadow);
-        }
-
-        [data-theme="dark"] .theme-toggle:hover {
-          box-shadow: 0 0 15px rgba(0, 212, 255, 0.2), inset 2px 2px 4px var(--clay-inset-shadow);
-        }
-      `}</style>
+    <div className="min-h-screen selection:bg-[#c084fc] selection:text-white font-sans pb-24 md:pb-0 pt-20 md:pt-6">
       {/* Header */}
-      <header className="bg-white px-4 py-4 border-b border-gray-200 flex justify-between items-center">
+      <header className="px-4 md:px-12 py-6 mb-4 flex flex-col md:flex-row md:items-center justify-between md:ml-20">
         <div>
-          <p className="text-sm text-gray-500">Good morning</p>
-          <h1 className="text-xl font-bold text-gray-900">{shop?.shop_name || "My Shop"}</h1>
+          <h1 className="text-3xl font-black tracking-wide text-white">
+            Good morning, <span className="text-[#c084fc]">{dashboard.user?.name || "Ramesh"}</span>
+          </h1>
+          <p className="font-bold text-xs uppercase tracking-widest text-[#c084fc]/60 mt-1">
+            {dashboard.shop?.shop_name || "Ramesh Kirana Store"} • {dashboard.shop?.city || "Nagpur"}
+          </p>
         </div>
-        <button 
-          onClick={toggleTheme}
-          className="theme-toggle"
-          aria-label="Toggle theme"
-          title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
-        />
       </header>
 
-      <div className="px-4 py-4 max-w-lg mx-auto space-y-6">
+      <main className="px-4 md:px-12 max-w-7xl mx-auto md:ml-20">
         {/* Stats Row */}
-        {totalToday && (
-          <div className="grid grid-cols-3 gap-3">
-            <div className="bg-white rounded-xl p-3 text-center shadow-sm border border-gray-100">
-              <p className="text-2xl font-bold text-gray-900">₹{totalToday.revenue.toLocaleString()}</p>
-              <p className="text-xs text-gray-500 mt-1">Revenue</p>
-            </div>
-            <div className="bg-white rounded-xl p-3 text-center shadow-sm border border-gray-100">
-              <p className="text-2xl font-bold text-gray-900">{totalToday.items_sold}</p>
-              <p className="text-xs text-gray-500 mt-1">Items Sold</p>
-            </div>
-            <div className="bg-white rounded-xl p-3 text-center shadow-sm border border-gray-100">
-              <p className="text-2xl font-bold text-green-600">₹{totalToday.profit_estimate.toLocaleString()}</p>
-              <p className="text-xs text-gray-500 mt-1">Est. Profit</p>
+        <section className="mb-10 grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
+          <div className="advanced-card !bg-gradient-to-br !from-[#9333ea] !to-[#4c1d95] text-white p-6 col-span-2 md:col-span-1 shadow-[0_8px_32px_rgba(147,51,234,0.4)] !border-none flex flex-col justify-center">
+            <h2 className="text-xs font-bold uppercase tracking-wider mb-1 opacity-90 text-[#e9d5ff]">Total Revenue Today</h2>
+            <div className="text-5xl md:text-6xl font-black mt-2 drop-shadow-md tracking-tighter">
+              ₹{dashboard.total_today?.revenue?.toLocaleString() || 0}
             </div>
           </div>
-        )}
+          
+          <div className="advanced-card p-6 flex flex-col justify-center">
+            <h2 className="text-xs font-bold uppercase tracking-wider mb-2 text-[#c084fc]/70">Items Sold</h2>
+            <div className="text-4xl font-black text-[#f3e8ff] drop-shadow-[0_0_12px_rgba(255,255,255,0.3)]">{dashboard.total_today?.items_sold || 0}</div>
+          </div>
+          
+          <div className="advanced-card p-6 flex flex-col justify-center">
+            <h2 className="text-xs font-bold uppercase tracking-wider mb-2 text-[#c084fc]/70">Est. Profit</h2>
+            <div className="text-4xl font-black text-[#4ade80] drop-shadow-[0_0_12px_rgba(74,222,128,0.4)]">₹{dashboard.total_today?.profit_estimate?.toLocaleString() || 0}</div>
+          </div>
+        </section>
 
-        {/* Alerts */}
-        {alerts.length > 0 && (
-          <section>
-            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">Alerts</h2>
-            <div className="space-y-2">
-              {alerts.map((alert) => (
-                <AlertCard key={alert.id} alert={alert} />
+        {/* Alerts Section */}
+        {highOrMediumAlerts.length > 0 && (
+          <section className="mb-10">
+            <div className="flex items-center gap-3 mb-6 bg-red-500/10 text-red-500 px-4 py-2.5 rounded-full w-max border border-red-500/20 backdrop-blur-md">
+              <div className="w-3 h-3 rounded-full bg-red-500 shadow-[0_0_12px_rgba(239,68,68,0.8)] animate-pulse" />
+              <h2 className="text-xs font-black uppercase tracking-widest">
+                Action Required
+              </h2>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
+              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+              {highOrMediumAlerts.map((alert: any) => (
+                <AlertCard
+                  key={alert.id}
+                  productName={alert.product_name}
+                  severity={alert.severity}
+                  message={alert.message}
+                />
               ))}
             </div>
           </section>
         )}
 
-        {/* Products */}
-        <section>
-          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">Top Products</h2>
-          <div className="space-y-3">
-            {products.map((product) => (
-              <ProductCard key={product.id} product={product} />
+        {/* Product Cards Section */}
+        <section className="mb-10">
+          <div className="mb-6 flex justify-between items-end">
+            <h2 className="text-sm font-black uppercase tracking-widest text-[#c084fc]/80 bg-[#c084fc]/10 px-4 py-2 rounded-xl backdrop-blur-sm border border-[#c084fc]/20">
+              Top Products
+            </h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
+            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+            {dashboard.top_products?.map((product: any) => (
+              <ProductCard
+                key={product.id}
+                name={product.name}
+                todayQty={product.today_qty}
+                todayRevenue={product.today_revenue}
+                trendPct={product.trend_pct}
+                mandiPrice={product.mandi_price}
+                riskLevel={product.risk_level}
+              />
             ))}
           </div>
         </section>
-      </div>
+      </main>
 
-      <MicFAB />
-      <BottomNav active="dashboard" />
-    </main>
+      <BottomNav />
+    </div>
   );
 }

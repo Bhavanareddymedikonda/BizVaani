@@ -15,19 +15,24 @@ from core.auth_utils import get_current_user, TokenData
 router = APIRouter()
 
 
-@router.get("/forecast/{product_id}")
+@router.get("/forecast/{product_id_or_name}")
 async def get_forecast(
-    product_id: int,
+    product_id_or_name: str,
     current_user: TokenData = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     shop_id = current_user.shop_id
     today = date.today()
 
-    # Verify product belongs to this shop
-    product_result = await db.execute(
-        select(Product).where(and_(Product.id == product_id, Product.shop_id == shop_id))
-    )
+    # Verify product belongs to this shop (by ID or name)
+    if product_id_or_name.isdigit():
+        product_result = await db.execute(
+            select(Product).where(and_(Product.id == int(product_id_or_name), Product.shop_id == shop_id))
+        )
+    else:
+        product_result = await db.execute(
+            select(Product).where(and_(Product.name.ilike(f"%{product_id_or_name}%"), Product.shop_id == shop_id))
+        )
     product = product_result.scalar_one_or_none()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
@@ -37,7 +42,7 @@ async def get_forecast(
         select(MLForecast)
         .where(and_(
             MLForecast.shop_id == shop_id,
-            MLForecast.product_id == product_id,
+            MLForecast.product_id == product.id,
             MLForecast.forecast_date >= today,
         ))
         .order_by(MLForecast.forecast_date)

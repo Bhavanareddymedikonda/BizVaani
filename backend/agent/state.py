@@ -2,7 +2,7 @@
 
 Ref: BACKEND_STRUCTURE.md Section 3 (LangGraph Agent — ShopState)
 """
-from typing import TypedDict, Optional
+from typing import TypedDict, Optional, List
 
 
 class ShopState(TypedDict):
@@ -11,6 +11,7 @@ class ShopState(TypedDict):
     shop_id: int
     query: str
     language: str  # 'hi', 'te', or 'en'
+    conversation_history: Optional[List[dict]]  # [{"role": "user"|"assistant", "text": str}]
 
     # Fetched context (parallel nodes)
     sales_data: Optional[dict]

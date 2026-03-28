@@ -137,7 +137,7 @@
 - No customer loyalty program
 - No web scraping in real-time response path (Tavily is background-only)
 - No Kubernetes or production-grade DevOps (Railway + Vercel only)
-- No iOS App Store / Google Play submission (PWA only)
+- No native iOS / Android app submission in v1; desktop-first web app only
 
 ---
 
@@ -180,7 +180,7 @@
 ## 9. Dependencies & Constraints
 - **API Dependencies**: Sarvam AI (STT/TTS), Groq (LLM), Agmarknet (market data), Tavily (web search)
 - **Free Tier Limits**: Groq 14,400 req/day; Tavily 1,000 searches/month; Sarvam pay-as-you-go
-- **Technical Constraints**: Must run on mobile PWA; voice pipeline must be < 1.5s perceived latency
+- **Technical Constraints**: Must run as a desktop-first web app; voice pipeline must be < 1.5s perceived latency
 - **Business Constraints**: Hackathon sprint (36 hours); 3-minute demo constraint
 - **Connectivity**: Must degrade gracefully on 2G/3G (cache last known prices)
 
@@ -190,7 +190,7 @@
 - **Hour 0–4**: Project setup, env, DB schema, LangGraph skeleton
 - **Hour 4–12**: Voice pipeline (STT → LangGraph → TTS), Agmarknet integration
 - **Hour 12–20**: ML forecasting (XGBoost), risk alerts, profit simulation
-- **Hour 20–28**: Frontend (Next.js PWA), cold start flows, invoice generation
+- **Hour 20–28**: Frontend (Next.js desktop-first web app), claymorphism dashboard, cold start flows, invoice generation
 - **Hour 28–34**: Integration testing, latency fixes, demo polishing
 - **Hour 34–36**: Final rehearsal, bug fixes, deploy
 
@@ -205,7 +205,7 @@
 - **Demo internet failure**: Mitigation — pre-cache 3 demo flows locally
 
 ### Assumptions
-- Indian kirana owners will speak naturally into phone if UI is simple enough
+- Indian kirana owners and demo judges will trust a richer desktop dashboard if the UI remains clear and number-driven
 - Benchmark FMCG data approximates real shop performance within ±25% (validated by plan)
 - Agmarknet data available for demo district (Nagpur or Hyderabad)
 - Price elasticity of 1.3 is reasonable for basic grocery categories

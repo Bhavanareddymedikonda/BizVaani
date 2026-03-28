@@ -124,7 +124,7 @@ async def fetch_market_data(state: ShopState, db: AsyncSession) -> ShopState:
 
 
 async def generate_response(state: ShopState, db: AsyncSession) -> ShopState:
-    """Call Groq LLM to generate the WHY/WHAT/₹ response."""
+    """Call Groq LLM with session context to generate the WHY/WHAT/₹ response."""
     from agent.prompts import SYSTEM_PROMPT, build_prompt
 
     user_prompt = build_prompt(state)
@@ -132,7 +132,21 @@ async def generate_response(state: ShopState, db: AsyncSession) -> ShopState:
     if GROQ_API_KEY:
         try:
             import httpx
-            async with httpx.AsyncClient(timeout=15) as client:
+
+            # Build message list: system + history + current query
+            history = state.get("conversation_history") or []
+            messages: list[dict] = [{"role": "system", "content": SYSTEM_PROMPT}]
+
+            # Inject prior turns (last 6 to keep context window small)
+            for turn in history[-6:]:
+                role = turn.get("role", "user")
+                if role in ("user", "assistant"):
+                    messages.append({"role": role, "content": turn.get("text", "")})
+
+            # Current user query with full data context
+            messages.append({"role": "user", "content": user_prompt})
+
+            async with httpx.AsyncClient(timeout=20) as client:
                 resp = await client.post(
                     "https://api.groq.com/openai/v1/chat/completions",
                     headers={
@@ -141,10 +155,7 @@ async def generate_response(state: ShopState, db: AsyncSession) -> ShopState:
                     },
                     json={
                         "model": "llama-3.3-70b-versatile",
-                        "messages": [
-                            {"role": "system", "content": SYSTEM_PROMPT},
-                            {"role": "user", "content": user_prompt},
-                        ],
+                        "messages": messages,
                         "temperature": 0.7,
                         "max_tokens": 500,
                     },
@@ -157,9 +168,10 @@ async def generate_response(state: ShopState, db: AsyncSession) -> ShopState:
 
         except Exception as e:
             print(f"[Agent] Groq error: {e}")
+            raise RuntimeError(f"Failed to generate response: {e}")
 
-    # Fallback: generate rule-based response
-    return _generate_fallback(state)
+    raise RuntimeError("GROQ_API_KEY is missing. Real LLM connection is required.")
+
 
 
 def _parse_response(state: ShopState, content: str) -> ShopState:
@@ -187,17 +199,4 @@ def _parse_response(state: ShopState, content: str) -> ShopState:
     return state
 
 
-def _generate_fallback(state: ShopState) -> ShopState:
-    """Rule-based fallback when Groq is unavailable."""
-    sales = state.get("sales_data", {})
-    market = state.get("market_data", {})
 
-    products_7d = sales.get("products_7d", []) if sales else []
-    top_product = products_7d[0] if products_7d else {"name": "Rice", "qty": 30, "revenue": 1350}
-
-    state["why_text"] = f"Based on your sales data, {top_product['name']} is your top product with ₹{top_product.get('revenue', 0):.0f} revenue this week."
-    state["what_text"] = f"Consider promoting {top_product['name']} with a combo offer to increase basket size."
-    state["rupees_impact"] = round(top_product.get("revenue", 0) * 0.15, 0)
-    state["response_text"] = f"{state['why_text']} {state['what_text']}"
-    state["alert_triggered"] = False
-    return state

@@ -193,8 +193,9 @@ export default function OnboardPage() {
       console.log("Data path selected:", dataPath);
       setError("");
       router.push("/dashboard");
-    } catch (err) {
+    } catch (err: any) {
       console.error("Registration failed:", err);
+      alert(err.message || "Registration failed. Please check your inputs.");
       setError("Registration failed. Please try again.");
     }
   };
