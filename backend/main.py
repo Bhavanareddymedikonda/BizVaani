@@ -15,7 +15,7 @@ from fastapi.responses import JSONResponse
 load_dotenv(Path(__file__).with_name(".env"))
 
 from db.database import init_db
-from api import auth, dashboard, sales, forecast, market, invoice, simulate, voice, settings, inventory
+from api import alerts, auth, dashboard, sales, forecast, market, invoice, simulate, voice, settings, inventory
 
 
 @asynccontextmanager
@@ -75,6 +75,7 @@ app.add_middleware(
 
 # REST Routes
 app.include_router(auth.router, prefix="/api/auth", tags=["Auth"])
+app.include_router(alerts.router, prefix="/api", tags=["Alerts"])
 app.include_router(dashboard.router, prefix="/api", tags=["Dashboard"])
 app.include_router(sales.router, prefix="/api/sales", tags=["Sales"])
 app.include_router(inventory.router, prefix="/api/inventory", tags=["Inventory"])

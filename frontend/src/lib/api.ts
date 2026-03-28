@@ -210,12 +210,28 @@ export async function getInventoryTransactions(params?: {
   return request<StockTransaction[]>(`/api/inventory/transactions${suffix}`);
 }
 
+export interface RiskAlert {
+  id: number;
+  product_id: number;
+  product_name: string;
+  severity: "HIGH" | "MEDIUM" | "LOW";
+  message: string;
+  reason?: string;
+  created_at: string;
+}
+
 export async function getForecast(productId: number | string) {
   return request(`/api/forecast/${productId}`);
 }
 
 export async function getAlerts() {
-  return request("/api/alerts");
+  return request<RiskAlert[]>("/api/alerts");
+}
+
+export async function runAlertsJob() {
+  return request<{ status: string; alerts: RiskAlert[] }>("/api/alerts/run", {
+    method: "POST",
+  });
 }
 
 export async function getMarketPrices() {

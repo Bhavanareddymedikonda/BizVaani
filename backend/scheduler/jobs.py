@@ -80,10 +80,10 @@ async def refresh_tavily():
 
 
 async def check_and_fire_alerts():
-    """Check all shops for risk alerts. Runs at 6 AM and 6 PM daily."""
+    """Check all shops for risk alerts every 30 minutes."""
     print("[Scheduler] Checking risk alerts...")
 
-    from ml.risk_detector import check_anomaly
+    from services.alerts import compute_shop_alerts
     from ws.dashboard_handler import broadcast_to_shop
 
     async with async_session() as db:
@@ -91,55 +91,11 @@ async def check_and_fire_alerts():
         shops = result.scalars().all()
 
         for shop in shops:
-            products_result = await db.execute(
-                select(Product).where(Product.shop_id == shop.id)
-            )
-            products = products_result.scalars().all()
-
-            from db.models import SalesEntry, MLForecast
-            from sqlalchemy import func
-
-            today = date.today()
-
-            for product in products:
-                # Get today's actual sales
-                actual_result = await db.execute(
-                    select(func.sum(SalesEntry.quantity_sold))
-                    .where(and_(
-                        SalesEntry.shop_id == shop.id,
-                        SalesEntry.product_id == product.id,
-                        SalesEntry.entry_date == today,
-                    ))
-                )
-                actual = actual_result.scalar() or 0
-
-                # Get today's forecast
-                forecast_result = await db.execute(
-                    select(MLForecast)
-                    .where(and_(
-                        MLForecast.shop_id == shop.id,
-                        MLForecast.product_id == product.id,
-                        MLForecast.forecast_date == today,
-                    ))
-                )
-                forecast = forecast_result.scalar_one_or_none()
-
-                if forecast and forecast.predicted_qty > 0:
-                    is_anomaly, deviation = check_anomaly(
-                        float(actual), float(forecast.predicted_qty)
-                    )
-
-                    if is_anomaly:
-                        alert_msg = {
-                            "type": "alert",
-                            "payload": {
-                                "product_name": product.name,
-                                "severity": "HIGH",
-                                "message": f"Sales dropped {abs(deviation):.0f}% below forecast",
-                            },
-                        }
-                        await broadcast_to_shop(shop.id, alert_msg)
-                        print(f"[Alert] {product.name} anomaly at shop {shop.id}: {deviation:.1f}%")
+            alerts = await compute_shop_alerts(db, shop.id, refresh_news=True)
+            for alert in alerts:
+                await broadcast_to_shop(shop.id, {"type": "alert", "payload": alert})
+            if alerts:
+                print(f"[Alert] Broadcast {len(alerts)} alert(s) for shop {shop.id}")
 
 
 def start_scheduler():
@@ -150,7 +106,7 @@ def start_scheduler():
         scheduler = AsyncIOScheduler()
         scheduler.add_job(refresh_agmarknet, "interval", hours=4, id="agmarknet_refresh")
         scheduler.add_job(refresh_tavily, "interval", hours=4, id="tavily_cache")
-        scheduler.add_job(check_and_fire_alerts, "cron", hour="6,18", id="alert_checker")
+        scheduler.add_job(check_and_fire_alerts, "interval", minutes=30, id="alert_checker")
         scheduler.start()
         print("[Scheduler] APScheduler started with 3 jobs")
         return scheduler

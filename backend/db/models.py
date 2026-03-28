@@ -148,6 +148,33 @@ class MLForecast(Base):
     )
 
 
+class NewsSignalCache(Base):
+    __tablename__ = "news_signal_cache"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    shop_id = Column(Integer, ForeignKey("shops.id", ondelete="CASCADE"), nullable=False)
+    product_id = Column(Integer, ForeignKey("products.id", ondelete="CASCADE"), nullable=False)
+    geo_scope = Column(String(20), nullable=False)
+    signal_kind = Column(String(20), nullable=False)
+    signal_source = Column(String(20), default="news")
+    title = Column(String(255), nullable=True)
+    summary = Column(Text, nullable=True)
+    action_hint = Column(Text, nullable=True)
+    signal_strength = Column(Float, default=0)
+    confidence = Column(Float, default=0)
+    urls = Column(JSON, nullable=False, default=list)
+    freshness_hours = Column(Integer, default=6)
+    expires_at = Column(DateTime, nullable=True)
+    fetched_at = Column(DateTime, default=_utcnow)
+    created_at = Column(DateTime, default=_utcnow)
+    updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow)
+
+    __table_args__ = (
+        UniqueConstraint("shop_id", "product_id", "geo_scope", name="uq_news_signal_shop_product_geo"),
+        Index("idx_news_signal_shop_product", "shop_id", "product_id"),
+        Index("idx_news_signal_expires_at", "expires_at"),
+    )
+
+
 class Invoice(Base):
     __tablename__ = "invoices"
     id = Column(Integer, primary_key=True, autoincrement=True)

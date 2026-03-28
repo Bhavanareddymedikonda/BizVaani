@@ -42,12 +42,14 @@ export function useDashboardSocket(shopId: number | null) {
 
           switch (data.type) {
             case "alert": {
-              // New or updated alert pushed by APScheduler
               const alert = data.payload as {
                 id: number;
+                product_id?: number;
                 product_name: string;
-                level: "HIGH" | "MEDIUM" | "LOW";
-                reason: string;
+                severity: "HIGH" | "MEDIUM" | "LOW";
+                message: string;
+                reason?: string;
+                created_at?: string;
               };
               addAlert(alert);
               break;

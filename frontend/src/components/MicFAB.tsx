@@ -1,10 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import VoiceModal from "./VoiceModal";
 
 export default function MicFAB() {
   const [isOpen, setIsOpen] = useState(false);
+  const [initialPrompt, setInitialPrompt] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handleOpenVoice = (event: Event) => {
+      const customEvent = event as CustomEvent<{ prompt?: string }>;
+      setInitialPrompt(customEvent.detail?.prompt ?? null);
+      setIsOpen(true);
+    };
+
+    window.addEventListener("bv-open-voice", handleOpenVoice as EventListener);
+    return () => window.removeEventListener("bv-open-voice", handleOpenVoice as EventListener);
+  }, []);
 
   return (
     <>
@@ -46,7 +58,12 @@ export default function MicFAB() {
         }
       `}</style>
 
-      <VoiceModal open={isOpen} onClose={() => setIsOpen(false)} />
+      <VoiceModal
+        open={isOpen}
+        initialPrompt={initialPrompt}
+        onPromptConsumed={() => setInitialPrompt(null)}
+        onClose={() => setIsOpen(false)}
+      />
     </>
   );
 }

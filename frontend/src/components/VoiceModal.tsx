@@ -8,6 +8,8 @@ import { useVoiceCapture } from "@/hooks/useVoiceCapture";
 
 interface Props {
   open: boolean;
+  initialPrompt?: string | null;
+  onPromptConsumed?: () => void;
   onClose: () => void;
 }
 
@@ -336,7 +338,7 @@ function ChatBubble({
   );
 }
 
-export default function VoiceModal({ open, onClose }: Props) {
+export default function VoiceModal({ open, initialPrompt = null, onPromptConsumed, onClose }: Props) {
   const { shopId: storeShopId } = useShopStore();
   const {
     isListening,
@@ -364,6 +366,12 @@ export default function VoiceModal({ open, onClose }: Props) {
     if (!scrollRef.current) return;
     scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [messages, isProcessing, error]);
+
+  useEffect(() => {
+    if (!open || !initialPrompt || !resolvedShopId || isProcessing) return;
+    void sendTextQuery(initialPrompt);
+    onPromptConsumed?.();
+  }, [open, initialPrompt, resolvedShopId, isProcessing, sendTextQuery, onPromptConsumed]);
 
   const handleClose = useCallback(() => {
     if (isListening) stopVoice();

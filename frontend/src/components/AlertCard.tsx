@@ -6,12 +6,16 @@ interface AlertCardProps {
   productName: string;
   severity: "HIGH" | "MEDIUM" | "LOW";
   message: string;
+  reason?: string;
+  onAskBizVaani?: () => void;
 }
 
 export default function AlertCard({
   productName,
   severity,
   message,
+  reason,
+  onAskBizVaani,
 }: AlertCardProps) {
   const isHigh = severity === "HIGH";
   const isMedium = severity === "MEDIUM";
@@ -28,6 +32,21 @@ export default function AlertCard({
     HIGH: "bg-red-500/20 text-red-400 border-red-500/30",
     MEDIUM: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
     LOW: "bg-blue-500/20 text-blue-400 border-blue-500/30"
+  };
+
+  const handleAsk = () => {
+    if (onAskBizVaani) {
+      onAskBizVaani();
+      return;
+    }
+
+    window.dispatchEvent(
+      new CustomEvent("bv-open-voice", {
+        detail: {
+          prompt: `Explain this business risk and what I should do now. Product: ${productName}. Severity: ${severity}. Alert: ${message}. Reason: ${reason ?? "No extra reason available."}`,
+        },
+      }),
+    );
   };
 
   return (
@@ -52,9 +71,16 @@ export default function AlertCard({
         {message}
       </p>
 
+      {reason && (
+        <p className="pl-2 text-xs leading-6 text-white/45">
+          {reason}
+        </p>
+      )}
+
       <div className="mt-2 pl-2">
         <button 
-          onClick={() => console.log("Ask BizVaani clicked for", productName)}
+          type="button"
+          onClick={handleAsk}
           className="advanced-btn-sm px-4 py-2 text-[10px] sm:text-xs"
         >
           Ask BizVaani
