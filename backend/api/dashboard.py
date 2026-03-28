@@ -3,13 +3,13 @@
 GET /api/dashboard → aggregated shop data: products, alerts, totals.
 Ref: BACKEND_STRUCTURE.md Section 4 (GET /api/dashboard)
 """
-from datetime import date, timedelta
+from datetime import date, datetime, time, timedelta
 from fastapi import APIRouter, Depends
 from sqlalchemy import select, func, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.database import get_db
-from db.models import Shop, Product, SalesEntry, MarketPrice, MLForecast, User
+from db.models import Shop, Product, SalesEntry, MarketPrice, MLForecast, User, StockTransaction
 from core.auth_utils import get_current_user, TokenData
 from services.inventory import stock_status
 
@@ -23,6 +23,7 @@ async def get_dashboard(
 ):
     shop_id = current_user.shop_id
     today = date.today()
+    today_start = datetime.combine(today, time.min)
 
     # Fetch shop
     shop_result = await db.execute(select(Shop).where(Shop.id == shop_id))
@@ -50,6 +51,29 @@ async def get_dashboard(
         .group_by(SalesEntry.product_id)
     )
     today_map = {row.product_id: {"qty": float(row.today_qty), "rev": float(row.today_revenue)} for row in today_sales}
+
+    today_stock_sales = await db.execute(
+        select(
+            StockTransaction.product_id,
+            func.sum(func.abs(StockTransaction.quantity_delta)).label("today_qty"),
+            func.sum(func.abs(StockTransaction.quantity_delta) * func.coalesce(StockTransaction.unit_price, 0)).label("today_revenue"),
+        )
+        .where(
+            and_(
+                StockTransaction.shop_id == shop_id,
+                StockTransaction.created_at >= today_start,
+                StockTransaction.transaction_type.in_(["sale", "invoice_sale"]),
+            )
+        )
+        .group_by(StockTransaction.product_id)
+    )
+    today_tx_map = {
+        row.product_id: {
+            "qty": float(row.today_qty or 0),
+            "rev": float(row.today_revenue or 0),
+        }
+        for row in today_stock_sales
+    }
 
     # 7-day-ago sales per product (for trend calculation)
     week_ago = today - timedelta(days=7)
@@ -89,7 +113,9 @@ async def get_dashboard(
     inventory_value = 0.0
 
     for p in products:
-        t = today_map.get(p.id, {"qty": 0, "rev": 0})
+        t = today_map.get(p.id)
+        if not t:
+            t = today_tx_map.get(p.id, {"qty": 0, "rev": 0})
         wa_qty = week_ago_map.get(p.id, t["qty"] if t["qty"] else 1)
         trend_pct = round(((t["qty"] - wa_qty) / wa_qty) * 100, 1) if wa_qty else 0
         avg_daily_qty = t["qty"] / 7 if t["qty"] else 0

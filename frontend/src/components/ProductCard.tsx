@@ -39,22 +39,22 @@ export default function ProductCard({
   };
 
   return (
-    <div className="advanced-card advanced-card-hover group flex cursor-pointer flex-col justify-between p-5">
-      <div className="mb-2 flex items-start justify-between">
-        <h3 className="text-lg font-extrabold uppercase tracking-wider text-white">{name}</h3>
+    <div className="advanced-card advanced-card-hover group flex min-w-0 cursor-pointer flex-col justify-between overflow-hidden p-5">
+      <div className="mb-2 flex min-w-0 items-start justify-between gap-3">
+        <h3 className="min-w-0 break-words text-lg font-extrabold uppercase tracking-wider text-white">{name}</h3>
         <div className="flex items-center gap-2">
           <div className={`h-3.5 w-3.5 rounded-full border border-white/40 ${riskColors[riskLevel]}`} title={`Risk: ${riskLevel}`} />
         </div>
       </div>
 
-      <div className="my-3">
-        <p className="text-4xl font-black tracking-tighter text-[#c084fc] drop-shadow-[0_0_12px_rgba(192,132,252,0.3)]">
+      <div className="my-3 min-w-0">
+        <p className="overflow-hidden text-[clamp(2.2rem,3vw,3.8rem)] font-black leading-none tracking-[-0.05em] text-[#c084fc] drop-shadow-[0_0_12px_rgba(192,132,252,0.3)]">
           Rs.{todayRevenue.toLocaleString()}
         </p>
-        <p className="mt-3 border-t border-white/10 pt-3 text-sm font-medium text-[#c084fc]/60">
+        <p className="mt-3 border-t border-white/10 pt-3 text-sm font-medium leading-6 text-[#c084fc]/60">
           Qty: <span className="font-bold text-white/90">{todayQty}</span> | Mandi: <span className="font-bold text-white/90">Rs.{mandiPrice}</span>
         </p>
-        <p className="mt-2 text-xs font-bold uppercase tracking-[0.2em] text-white/60">
+        <p className="mt-2 break-words text-xs font-bold uppercase tracking-[0.2em] text-white/60">
           Stock: <span className={stockColors[stockStatus]}>{stockQty} {unit}</span>
         </p>
       </div>
