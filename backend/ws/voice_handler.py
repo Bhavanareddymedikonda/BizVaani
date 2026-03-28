@@ -242,6 +242,25 @@ async def voice_websocket(
                     })
                     await process_query(query, msg_id)
 
+                elif msg_type == "hydrate_session":
+                    history = msg.get("history")
+                    incoming_session_id = msg.get("session_id")
+                    if isinstance(history, list):
+                        conversation_history = [
+                            {
+                                "role": item.get("role", "user"),
+                                "text": item.get("text", ""),
+                            }
+                            for item in history
+                            if isinstance(item, dict) and item.get("text")
+                        ]
+                    if incoming_session_id:
+                        session_id = str(incoming_session_id)
+                    await websocket.send_json({
+                        "type": "session_start",
+                        "session_id": session_id,
+                    })
+
                 elif msg_type == "clear_session":
                     # User wants to start fresh
                     conversation_history = []

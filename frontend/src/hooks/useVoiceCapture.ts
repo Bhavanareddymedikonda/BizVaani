@@ -10,7 +10,7 @@ export function useVoiceCapture(shopId: number | null) {
   const {
     setListening, setProcessing, setError, setSessionId,
     addUserMessage, addAssistantMessage, updateAssistantMessage,
-    setTranscript,
+    setTranscript, hydratePersistedSession,
   } = useVoiceStore();
 
   const wsRef = useRef<WebSocket | null>(null);
@@ -58,7 +58,20 @@ export function useVoiceCapture(shopId: number | null) {
       ws.binaryType = "arraybuffer";
       wsRef.current = ws;
 
-      ws.onopen = () => resolve(ws);
+      ws.onopen = () => {
+        const { messages, sessionId } = useVoiceStore.getState();
+        if (messages.length > 0 || sessionId) {
+          ws.send(JSON.stringify({
+            type: "hydrate_session",
+            session_id: sessionId,
+            history: messages.map((message) => ({
+              role: message.role,
+              text: message.text,
+            })),
+          }));
+        }
+        resolve(ws);
+      };
       ws.onerror = () => reject(new Error("WebSocket connection failed"));
 
       ws.onmessage = async (event) => {
@@ -268,7 +281,12 @@ export function useVoiceCapture(shopId: number | null) {
     setProcessing(false);
   }, [setListening, setProcessing]);
 
-  useEffect(() => () => { disconnect(); }, [disconnect]);
+  useEffect(() => {
+    hydratePersistedSession();
+    return () => {
+      disconnect();
+    };
+  }, [disconnect, hydratePersistedSession]);
 
   return { startVoice, stopVoice, sendTextQuery, clearSession, disconnect };
 }
