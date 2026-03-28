@@ -122,7 +122,7 @@
 ### Core Framework
 - **Framework**: Next.js 14.2.x (App Router)
 - **Language**: TypeScript 5.4.x
-- **Reason**: Built-in API routes, SSR for fast mobile load, PWA support, Vercel deploy in 1 click
+- **Reason**: Built-in API routes, SSR for fast desktop web load, App Router flexibility, Vercel deploy in 1 click
 - **Documentation**: https://nextjs.org/docs
 
 ### UI Library
@@ -146,10 +146,12 @@
 - **Use**: 7-day/30-day demand forecast, sales trend, competitor price chart
 - **Reason**: React-native, lightweight, good Hindi label support
 
-### PWA
+### Web App Delivery
 - **Config**: `next-pwa 5.6.x`
 - **Manifest**: App icon, name in Hindi ("बिज़वाणी"), display: standalone
-- **Service Worker**: Cache last dashboard state offline
+- **Primary Experience**: Desktop-first browser application
+- **Responsive Strategy**: Tablet and mobile adapt from the desktop information architecture
+- **Offline Support**: Cache last dashboard state for demo resilience where useful
 
 ### HTTP Client
 - **Library**: Axios 1.7.x with interceptors for JWT refresh

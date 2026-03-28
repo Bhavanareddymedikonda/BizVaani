@@ -124,7 +124,7 @@ async def fetch_market_data(state: ShopState, db: AsyncSession) -> ShopState:
 
 
 async def generate_response(state: ShopState, db: AsyncSession) -> ShopState:
-    """Call Groq LLM to generate the WHY/WHAT/₹ response."""
+    """Call Groq LLM with session context to generate the WHY/WHAT/₹ response."""
     from agent.prompts import SYSTEM_PROMPT, build_prompt
 
     user_prompt = build_prompt(state)
@@ -132,7 +132,21 @@ async def generate_response(state: ShopState, db: AsyncSession) -> ShopState:
     if GROQ_API_KEY:
         try:
             import httpx
-            async with httpx.AsyncClient(timeout=15) as client:
+
+            # Build message list: system + history + current query
+            history = state.get("conversation_history") or []
+            messages: list[dict] = [{"role": "system", "content": SYSTEM_PROMPT}]
+
+            # Inject prior turns (last 6 to keep context window small)
+            for turn in history[-6:]:
+                role = turn.get("role", "user")
+                if role in ("user", "assistant"):
+                    messages.append({"role": role, "content": turn.get("text", "")})
+
+            # Current user query with full data context
+            messages.append({"role": "user", "content": user_prompt})
+
+            async with httpx.AsyncClient(timeout=20) as client:
                 resp = await client.post(
                     "https://api.groq.com/openai/v1/chat/completions",
                     headers={
@@ -141,10 +155,7 @@ async def generate_response(state: ShopState, db: AsyncSession) -> ShopState:
                     },
                     json={
                         "model": "llama-3.3-70b-versatile",
-                        "messages": [
-                            {"role": "system", "content": SYSTEM_PROMPT},
-                            {"role": "user", "content": user_prompt},
-                        ],
+                        "messages": messages,
                         "temperature": 0.7,
                         "max_tokens": 500,
                     },
@@ -160,6 +171,7 @@ async def generate_response(state: ShopState, db: AsyncSession) -> ShopState:
 
     # Fallback: generate rule-based response
     return _generate_fallback(state)
+
 
 
 def _parse_response(state: ShopState, content: str) -> ShopState:

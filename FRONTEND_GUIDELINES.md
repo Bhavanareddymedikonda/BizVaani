@@ -1,203 +1,176 @@
 # Frontend Design System & Guidelines
-## BizVaani — Voice-First AI Business Coach
+## BizVaani - Desktop-First Claymorphism Web App
 
 ---
 
 ## 1. Design Principles
 
-1. **Voice-First**: Every interaction should be doable by voice. Screen is secondary confirmation.
-2. **Hindi-Accessible**: All labels, alerts, and CTAs in Hindi (with English fallback). Font sizes > 16px always.
-3. **One Action Per Screen**: Kirana owner should never be confused. One primary CTA per view.
-4. **Instant Feedback**: Voice response starts in < 1.5s. Every tap gives visual feedback in < 100ms.
-5. **Trust Through Numbers**: Always show ₹ impact. Numbers build trust more than words.
+1. **Web-First Desktop Experience**: Primary layout target is laptop and desktop web. Mobile remains responsive, but not the primary canvas.
+2. **Claymorphism Visual Language**: Use soft extrusions, rounded surfaces, layered cards, warm light, and tactile controls.
+3. **Voice-Augmented, Not Voice-Only**: Voice remains important, but the screen should stand alone as a rich business cockpit.
+4. **Decision Clarity**: Every major panel should answer one business question clearly: what changed, why it changed, and what to do next.
+5. **Trust Through Numbers**: Rupee impact, trend deltas, and forecast confidence must be prominent and easy to compare.
 
 ---
 
-## 2. Design Tokens
+## 2. Design Direction
+
+BizVaani should feel like a premium Indian business intelligence product, not a generic admin panel.
+
+- Default viewport: desktop dashboard with persistent navigation, multi-column layout, and larger visual hierarchy
+- Surface style: claymorphism with soft highlights, inset shadows, rounded cards, and warm tonal layers
+- Brand tone: grounded, confident, business-forward
+- Interaction style: tactile buttons, clear hover states, restrained motion
+
+Avoid:
+
+- flat white cards on plain backgrounds
+- overly dark cyber UI
+- pure mobile-app conventions as the primary layout model
+- cramped analytics screens with too many equally weighted elements
+
+---
+
+## 3. Design Tokens
 
 ### Color Palette
 
-#### Primary — Saffron (Trust, India, Business)
+#### Primary - Clay Orange
 ```css
---color-primary-50:  #fff7ed;
---color-primary-100: #ffedd5;
---color-primary-200: #fed7aa;
---color-primary-300: #fdba74;
---color-primary-400: #fb923c;
---color-primary-500: #f97316;  /* Main brand — BizVaani saffron */
---color-primary-600: #ea580c;
---color-primary-700: #c2410c;
---color-primary-800: #9a3412;
---color-primary-900: #7c2d12;
+--color-primary-50:  #fff7f0;
+--color-primary-100: #ffe9d6;
+--color-primary-200: #ffd0a8;
+--color-primary-300: #ffb678;
+--color-primary-400: #f89a4d;
+--color-primary-500: #ea7a22;
+--color-primary-600: #cf6416;
+--color-primary-700: #ab4f12;
+--color-primary-800: #893f13;
+--color-primary-900: #6d3314;
 ```
 
-#### Secondary — Deep Green (Profit, Growth)
+#### Surface - Warm Clay Neutrals
 ```css
---color-secondary-50:  #f0fdf4;
---color-secondary-500: #22c55e;  /* Profit green */
---color-secondary-700: #15803d;
+--color-surface-0: #f8f3ec;
+--color-surface-1: #efe6db;
+--color-surface-2: #e4d7c8;
+--color-surface-3: #d6c3b0;
+--color-surface-4: #bfa791;
+--color-surface-5: #8f7764;
 ```
 
-#### Neutral
+#### Accent
 ```css
---color-neutral-50:  #fafafa;
---color-neutral-100: #f4f4f5;
---color-neutral-200: #e4e4e7;
---color-neutral-300: #d4d4d8;
---color-neutral-400: #a1a1aa;
---color-neutral-500: #71717a;
---color-neutral-600: #52525b;
---color-neutral-700: #3f3f46;
---color-neutral-800: #27272a;
---color-neutral-900: #18181b;
+--color-success: #2f9e5f;
+--color-warning: #d68a1d;
+--color-error:   #d64f45;
+--color-info:    #3f78c7;
 ```
 
-#### Semantic
+#### Text
 ```css
---color-success: #22c55e;   /* ₹ profit, positive delta */
---color-warning: #f59e0b;   /* Low stock, stale data */
---color-error:   #ef4444;   /* Risk alert, sales drop */
---color-info:    #3b82f6;   /* Market price info */
+--color-text-strong: #241d17;
+--color-text-base:   #4e4033;
+--color-text-muted:  #7a6a5d;
+--color-text-soft:   #9f9084;
 ```
 
 ### Typography
 
 ```css
---font-hindi:   'Noto Sans Devanagari', sans-serif;  /* For all Hindi text */
---font-sans:    'Inter', system-ui, sans-serif;       /* UI chrome, numbers */
---font-mono:    'JetBrains Mono', monospace;          /* Price values, debug */
+--font-display: 'Syne', 'Inter', sans-serif;
+--font-sans:    'Inter', system-ui, sans-serif;
+--font-hindi:   'Noto Sans Devanagari', sans-serif;
+--font-mono:    'JetBrains Mono', monospace;
 ```
 
 #### Font Sizes
 ```css
---text-xs:   0.75rem;   /* 12px — labels, badges */
---text-sm:   0.875rem;  /* 14px — secondary text */
---text-base: 1rem;      /* 16px — body, minimum size */
---text-lg:   1.125rem;  /* 18px — card content */
---text-xl:   1.25rem;   /* 20px — card titles */
---text-2xl:  1.5rem;    /* 24px — section headers */
---text-3xl:  1.875rem;  /* 30px — ₹ impact number */
---text-4xl:  2.25rem;   /* 36px — hero numbers */
+--text-xs:   0.75rem;
+--text-sm:   0.875rem;
+--text-base: 1rem;
+--text-lg:   1.125rem;
+--text-xl:   1.25rem;
+--text-2xl:  1.5rem;
+--text-3xl:  1.875rem;
+--text-4xl:  2.25rem;
+--text-5xl:  3rem;
 ```
 
-#### Font Weights
+### Radius
 ```css
---font-normal:   400;
---font-medium:   500;
---font-semibold: 600;
---font-bold:     700;
-```
-
-### Spacing Scale
-```css
---spacing-1:  0.25rem;  /* 4px */
---spacing-2:  0.5rem;   /* 8px */
---spacing-3:  0.75rem;  /* 12px */
---spacing-4:  1rem;     /* 16px — default padding */
---spacing-5:  1.25rem;  /* 20px */
---spacing-6:  1.5rem;   /* 24px */
---spacing-8:  2rem;     /* 32px — section spacing */
---spacing-10: 2.5rem;   /* 40px */
---spacing-12: 3rem;     /* 48px */
---spacing-16: 4rem;     /* 64px */
-```
-
-### Border Radius
-```css
---radius-sm:   0.25rem;  /* 4px — tags, badges */
---radius-base: 0.5rem;   /* 8px — inputs */
---radius-md:   0.75rem;  /* 12px — cards */
---radius-lg:   1rem;     /* 16px — modals */
---radius-xl:   1.5rem;   /* 24px — mic button */
---radius-full: 9999px;   /* Circular — mic FAB */
+--radius-sm: 10px;
+--radius-md: 18px;
+--radius-lg: 24px;
+--radius-xl: 32px;
+--radius-pill: 999px;
 ```
 
 ### Shadows
 ```css
---shadow-sm: 0 1px 2px 0 rgba(0,0,0,0.05);
---shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
---shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
---shadow-glow-orange: 0 0 20px rgba(249,115,22,0.4);  /* Mic button active */
+--shadow-clay: 8px 8px 18px rgba(146, 121, 96, 0.18), -8px -8px 18px rgba(255, 255, 255, 0.55);
+--shadow-clay-inset: inset 3px 3px 6px rgba(146, 121, 96, 0.12), inset -3px -3px 6px rgba(255, 255, 255, 0.45);
+--shadow-clay-soft: 0 10px 30px rgba(88, 66, 46, 0.12);
+--shadow-glow-orange: 0 0 0 8px rgba(234, 122, 34, 0.12);
 ```
 
 ---
 
-## 3. Layout System
+## 4. Layout System
 
-### Container
+### Primary Container
 ```css
-max-width: 480px;      /* Mobile-first cap */
+max-width: 1440px;
 margin: 0 auto;
-padding: 0 spacing-4;
+padding: 0 32px;
 ```
 
 ### Responsive Breakpoints
 ```css
---breakpoint-sm:  480px;   /* Large phone */
---breakpoint-md:  768px;   /* Tablet */
---breakpoint-lg: 1024px;   /* Desktop */
+--breakpoint-sm:  640px;
+--breakpoint-md:  768px;
+--breakpoint-lg:  1024px;
+--breakpoint-xl:  1280px;
+--breakpoint-2xl: 1440px;
 ```
 
-### Layout Patterns
-
-**Mobile Stack (default)**
+### Desktop Shell
 ```jsx
-<div className="flex flex-col min-h-screen bg-neutral-50">
-  <Header />
-  <main className="flex-1 px-4 py-4 pb-24">{content}</main>
-  <BottomNav />   {/* Fixed at bottom */}
-  <MicFAB />      {/* Floating over bottom nav */}
+<div className="min-h-screen bg-[var(--color-surface-0)] text-[var(--color-text-strong)]">
+  <Sidebar />
+  <main className="ml-72 min-h-screen px-8 py-8">
+    <Topbar />
+    <section className="grid grid-cols-12 gap-6">{content}</section>
+  </main>
 </div>
 ```
 
-**Card Grid**
-```jsx
-<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">{cards}</div>
-```
+### Tablet/Mobile Behavior
+
+- Collapse the sidebar into a compact drawer
+- Convert dense multi-column dashboards into a 2-column then 1-column grid
+- Keep full analytics intact; do not redesign the whole product around bottom navigation
 
 ---
 
-## 4. Component Library
+## 5. Component Guidance
 
-### Mic FAB (Floating Action Button) — Core Component
+### Clay Card
 ```jsx
-// Active (listening)
-<button className="
-  fixed bottom-20 left-1/2 -translate-x-1/2
-  w-16 h-16 rounded-full
-  bg-primary-500 hover:bg-primary-600
-  shadow-glow-orange
-  flex items-center justify-center
-  animate-pulse
-  z-50
-">
-  <Mic className="w-7 h-7 text-white" />
-</button>
-
-// Idle
-<button className="
-  fixed bottom-20 left-1/2 -translate-x-1/2
-  w-16 h-16 rounded-full
-  bg-primary-500 hover:bg-primary-600
-  shadow-lg
-  flex items-center justify-center
-  transition-all duration-200 active:scale-95
-  z-50
-">
-  <Mic className="w-7 h-7 text-white" />
-</button>
+<div className="rounded-[24px] bg-[var(--color-surface-1)] shadow-[var(--shadow-clay)] border border-white/40">
+  {content}
+</div>
 ```
 
 ### Primary Button
 ```jsx
 <button className="
-  w-full px-6 py-3
-  bg-primary-500 hover:bg-primary-600 active:bg-primary-700
-  text-white font-semibold text-base
-  rounded-lg
-  transition-colors duration-150
-  disabled:opacity-50 disabled:cursor-not-allowed
-  focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2
+  rounded-[18px] px-5 py-3
+  bg-[var(--color-primary-500)] text-white
+  shadow-[var(--shadow-clay-soft)]
+  transition-all duration-150
+  hover:-translate-y-0.5 hover:bg-[var(--color-primary-600)]
+  active:translate-y-0 active:shadow-none
 ">
   {label}
 </button>
@@ -206,295 +179,113 @@ padding: 0 spacing-4;
 ### Secondary Button
 ```jsx
 <button className="
-  w-full px-6 py-3
-  bg-white border border-neutral-300
-  hover:bg-neutral-50 active:bg-neutral-100
-  text-neutral-800 font-medium text-base
-  rounded-lg
-  transition-colors duration-150
+  rounded-[18px] px-5 py-3
+  bg-[var(--color-surface-1)] text-[var(--color-text-base)]
+  shadow-[var(--shadow-clay)]
+  transition-all duration-150
 ">
   {label}
 </button>
 ```
 
-### Risk Alert Card
-```jsx
-<div className="
-  bg-red-50 border-l-4 border-error
-  rounded-lg p-4
-  flex items-start gap-3
-  shadow-sm
-">
-  <AlertTriangle className="w-5 h-5 text-error flex-shrink-0 mt-0.5" />
-  <div>
-    <p className="font-semibold text-error text-base">{alertTitle}</p>
-    <p className="text-neutral-600 text-sm mt-1">{alertBody}</p>
-    <button className="mt-2 text-primary-500 font-medium text-sm">
-      BizVaani se poochho →
-    </button>
-  </div>
-</div>
-```
+### Desktop Sidebar
 
-### Product Card (Dashboard)
-```jsx
-<div className="
-  bg-white border border-neutral-200
-  rounded-xl p-4 shadow-sm
-  hover:shadow-md transition-shadow duration-200
-">
-  <div className="flex justify-between items-start">
-    <p className="font-semibold text-neutral-800 text-base">{productName}</p>
-    <span className={`text-sm font-medium px-2 py-0.5 rounded-full ${
-      trend > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-    }`}>
-      {trend > 0 ? '↑' : '↓'} {Math.abs(trend)}%
-    </span>
-  </div>
-  <p className="text-2xl font-bold text-neutral-900 mt-2">₹{price}</p>
-  <p className="text-xs text-neutral-400 mt-1">Mandi: ₹{mandiPrice}/kg</p>
-</div>
-```
+- Persistent on desktop
+- Contains primary routes: Dashboard, Alerts, Forecast, Invoice, Settings
+- Clay surface with active pill indicator
+- Shop switcher and user area pinned near footer
 
-### ₹ Impact Simulation Card
-```jsx
-<div className="
-  bg-gradient-to-br from-green-50 to-green-100
-  border border-green-200 rounded-xl p-5
-  text-center
-">
-  <p className="text-neutral-600 text-sm mb-2">Is hafte extra kamaoge</p>
-  <p className="text-4xl font-bold text-green-700">
-    ₹<CountUp end={impactValue} duration={0.8} />
-  </p>
-  <p className="text-xs text-neutral-500 mt-2">{actionDescription}</p>
-</div>
-```
+### Dashboard Composition
 
-### Voice Response Card
-```jsx
-<div className="fixed inset-0 bg-black/60 flex items-end z-50">
-  <div className="
-    bg-white w-full rounded-t-2xl p-5
-    max-h-[80vh] overflow-y-auto
-  ">
-    {/* Waveform while speaking */}
-    <WaveformVisualizer isActive={isSpeaking} />
+- Row 1: headline, date range, market summary, primary CTA
+- Row 2: KPI cards for revenue, alerts, forecast confidence, profit delta
+- Row 3: main trend chart and alert stack
+- Row 4: product insight cards, simulation panel, invoice shortcuts
 
-    {/* Transcript */}
-    <p className="text-sm text-neutral-400 mb-3">{transcript}</p>
+### Voice Panel
 
-    {/* WHY */}
-    <div className="mb-3">
-      <span className="text-xs font-bold text-red-500 uppercase">Kyun</span>
-      <p className="text-base text-neutral-800 mt-1">{whyText}</p>
-    </div>
-
-    {/* WHAT */}
-    <div className="mb-3">
-      <span className="text-xs font-bold text-blue-500 uppercase">Kya Karen</span>
-      <p className="text-base text-neutral-800 mt-1">{whatText}</p>
-    </div>
-
-    {/* ₹ Impact */}
-    <ImpactCard impactValue={rupeesImpact} />
-
-    <button className="mt-4 w-full primary-button">Theek hai, kar dete hain</button>
-  </div>
-</div>
-```
-
-### Input Field
-```jsx
-<div className="space-y-1.5">
-  <label className="block text-sm font-medium text-neutral-700">
-    {label}
-  </label>
-  <input
-    className="
-      block w-full px-4 py-3
-      border border-neutral-300 rounded-lg
-      text-base text-neutral-900
-      placeholder:text-neutral-400
-      focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent
-      disabled:bg-neutral-50
-    "
-    placeholder={placeholder}
-  />
-  {error && <p className="text-sm text-error">{error}</p>}
-</div>
-```
-
-### Bottom Navigation Bar
-```jsx
-<nav className="
-  fixed bottom-0 left-0 right-0
-  bg-white border-t border-neutral-200
-  flex items-center justify-around
-  px-4 py-2
-  z-40 safe-area-pb
-">
-  {[
-    { icon: Home, label: 'Home', href: '/dashboard' },
-    { icon: Bell, label: 'Alerts', href: '/alerts' },
-    { icon: Package, label: 'Stock', href: '/inventory' },
-    { icon: FileText, label: 'Invoice', href: '/invoice' },
-  ].map(item => (
-    <Link href={item.href} className={`flex flex-col items-center gap-1 ${
-      isActive(item.href) ? 'text-primary-500' : 'text-neutral-400'
-    }`}>
-      <item.icon className="w-5 h-5" />
-      <span className="text-xs">{item.label}</span>
-    </Link>
-  ))}
-</nav>
-```
-
-### Loading Skeleton
-```jsx
-<div className="animate-pulse space-y-3">
-  <div className="h-5 bg-neutral-200 rounded w-3/4" />
-  <div className="h-4 bg-neutral-200 rounded w-1/2" />
-  <div className="h-10 bg-neutral-200 rounded" />
-</div>
-```
-
-### Toast / Alert Banner
-```jsx
-// Success
-<div className="fixed top-4 left-4 right-4 bg-green-600 text-white rounded-lg p-4 shadow-lg z-50 flex gap-3">
-  <CheckCircle className="w-5 h-5 flex-shrink-0" />
-  <p className="text-sm font-medium">{message}</p>
-</div>
-
-// Warning (offline / stale data)
-<div className="bg-amber-50 border border-amber-300 rounded-lg p-3 text-sm text-amber-800">
-  ⚠️ {message}
-</div>
-```
+- Voice should live as a right-side assistant panel or centered modal on desktop
+- Transcript, WHY, WHAT, and INR impact should render in structured sections
+- Mic is no longer the center of navigation; it is a power tool inside the dashboard
 
 ---
 
-## 5. Accessibility Guidelines
-- All interactive elements: min touch target 44×44px
-- Hindi text: always `font-hindi` class; fallback to system Devanagari
-- Mic button: `aria-label="Bol ke poochho"`, `role="button"`
-- Alert cards: `role="alert"` for screen readers
-- Color contrast: 4.5:1 minimum for all text on white
-- Focus visible: 2px orange ring on all focusable elements
-- Voice is primary — all actions doable without reading
+## 6. Claymorphism Rules
+
+1. Use light, warm backgrounds instead of stark white.
+2. Cards should feel raised, inputs slightly inset.
+3. Maintain large radii and generous spacing.
+4. Use contrast through elevation, not only borders.
+5. Blend business seriousness with tactile warmth.
+
+Do not overdo claymorphism:
+
+- avoid too many nested raised layers
+- avoid weak contrast
+- avoid mushy low-information cards
 
 ---
 
-## 6. Animation Guidelines
+## 7. Accessibility Guidelines
+
+- All interactive elements minimum 44x44px
+- Desktop keyboard navigation must be first-class
+- Hindi copy should use `font-hindi` where applicable
+- Maintain 4.5:1 contrast minimum
+- Respect `prefers-reduced-motion`
+- All analytics color coding must have text/icon reinforcement
+
+---
+
+## 8. Animation Guidelines
+
+- Use soft elevation shifts on hover
+- Use count-up animations only for KPI moments
+- Use subtle fade/slide for panel transitions
+- Voice waveform can animate, but should not dominate desktop layouts
+
 ```css
-/* Standard transitions */
-transition-colors: 150ms ease-in-out
-transition-shadow: 200ms ease-in-out
-transition-transform: 200ms ease-out
-
-/* Mic pulse (listening state) */
-@keyframes mic-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(249,115,22,0.4); }
-  50% { box-shadow: 0 0 0 12px rgba(249,115,22,0); }
-}
-
-/* ₹ count-up: use react-countup, duration 0.8s, easing easeOut */
-/* Waveform: requestAnimationFrame, 60fps amplitude bars */
-/* Page transitions: opacity 0→1, 200ms */
-```
-
-- Never animate width/height (causes layout reflow)
-- Respect `prefers-reduced-motion`: skip all animations except essential transitions
-
----
-
-## 7. Icon System
-- **Library**: Lucide React 0.395.x
-- **Sizes**: w-4 h-4 (16px), w-5 h-5 (20px), w-6 h-6 (24px), w-7 h-7 (28px for FAB)
-- **Stroke**: 2px (default Lucide)
-- **Color**: Inherited from parent or explicit text-{color} class
-
----
-
-## 8. State Indicators
-
-### Loading (Voice Processing)
-```jsx
-// Show inside voice modal while LLM is thinking
-<div className="flex gap-1 items-center justify-center py-4">
-  {[0,1,2].map(i => (
-    <div key={i} className={`w-2 h-2 bg-primary-500 rounded-full animate-bounce`}
-      style={{ animationDelay: `${i * 0.15}s` }} />
-  ))}
-</div>
-```
-
-### Empty State (No Data)
-```jsx
-<div className="text-center py-12 px-4">
-  <Mic className="w-12 h-12 text-neutral-300 mx-auto mb-3" />
-  <h3 className="text-lg font-semibold text-neutral-700 mb-1">
-    Abhi koi data nahi hai
-  </h3>
-  <p className="text-neutral-400 text-sm mb-4">
-    Bol ke shuru karein
-  </p>
-  <button className="primary-button">Bol ke Poochho</button>
-</div>
-```
-
-### Offline State
-```jsx
-<div className="bg-amber-400 text-white text-center py-2 text-sm font-medium">
-  📡 Network nahi hai — purana data dikha raha hai
-</div>
+transition-colors: 150ms ease-in-out;
+transition-transform: 180ms ease-out;
+transition-shadow: 180ms ease-out;
 ```
 
 ---
 
-## 9. Tailwind Config Extensions
-```js
-// tailwind.config.js
-module.exports = {
-  theme: {
-    extend: {
-      fontFamily: {
-        hindi: ['Noto Sans Devanagari', 'sans-serif'],
-        sans: ['Inter', 'system-ui', 'sans-serif'],
-      },
-      colors: {
-        primary: {
-          50: '#fff7ed', 100: '#ffedd5', 200: '#fed7aa',
-          300: '#fdba74', 400: '#fb923c', 500: '#f97316',
-          600: '#ea580c', 700: '#c2410c', 800: '#9a3412', 900: '#7c2d12'
-        },
-        error: '#ef4444',
-        success: '#22c55e',
-        warning: '#f59e0b',
-      },
-      boxShadow: {
-        'glow-orange': '0 0 20px rgba(249,115,22,0.4)',
-      },
-      animation: {
-        'mic-pulse': 'mic-pulse 1.5s ease-in-out infinite',
-      },
-      keyframes: {
-        'mic-pulse': {
-          '0%, 100%': { boxShadow: '0 0 0 0 rgba(249,115,22,0.4)' },
-          '50%': { boxShadow: '0 0 0 12px rgba(249,115,22,0)' },
-        }
-      }
-    }
-  }
-}
-```
+## 9. Tailwind Direction
+
+Extend Tailwind with:
+
+- clay surface colors
+- custom shadow tokens
+- large radii
+- display font for headings
+- reusable utility classes like `clay-card`, `clay-input`, `clay-btn`
 
 ---
 
-## 10. Browser & Device Support
-- **Primary**: Android Chrome 110+ (target device: ₹8,000–₹15,000 Android phones)
-- **Secondary**: iOS Safari 16+ (iPhone users in Tier 2 cities)
-- **Desktop**: Chrome 110+ (for demo/judges)
-- **PWA**: Install banner on Android Chrome; iOS "Add to Home Screen" manual
-- **Minimum screen**: 360×640px
+## 10. Device Support
+
+- **Primary**: Desktop Chrome, Edge, Safari on laptops and monitors
+- **Secondary**: Tablet landscape
+- **Responsive Support**: Mobile browsers remain supported, but as a compact adaptation of the desktop system
+- **Minimum desktop target**: 1280x800
+- **Minimum responsive target**: 390x844
+
+---
+
+## 11. Product Positioning Reminder
+
+BizVaani frontend is now a **desktop-first web application** with a premium **claymorphism analytics interface**.
+
+It should feel like:
+
+- an AI business cockpit
+- a modern SaaS dashboard for Indian retail
+- tactile, warm, and trustworthy
+
+It should not feel like:
+
+- a generic mobile app clone
+- a flat admin dashboard
+- a voice-only experiment with weak visual hierarchy

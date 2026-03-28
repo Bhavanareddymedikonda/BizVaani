@@ -1,330 +1,475 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
-import { voiceQuery } from "@/lib/api";
+import { useEffect, useRef, useState, useCallback } from "react";
+import { useVoiceStore, type ChatMessage } from "@/store/useVoiceStore";
+import { useShopStore } from "@/store/useShopStore";
+import { useVoiceCapture } from "@/hooks/useVoiceCapture";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-const WS_URL = API_URL.replace(/^http/, "ws");
-
-interface VoiceResponse {
-  why_text?: string;
-  what_text?: string;
-  rupees_impact?: number;
-  response_text?: string;
+/* ─── Props ─────────────────────────────────────────────────── */
+interface Props {
+  open:    boolean;
+  onClose: () => void;
 }
 
-// Mic animation rings
-function PulseRing({ active }: { active: boolean }) {
+/* ─── Mic button with pulse ──────────────────────────────────── */
+function MicButton({ listening, onPointerDown, onPointerUp }: {
+  listening: boolean;
+  onPointerDown: () => void;
+  onPointerUp:   () => void;
+}) {
   return (
-    <div className="relative flex items-center justify-center w-20 h-20">
-      {active && (
-        <>
-          <span className="absolute inset-0 rounded-full bg-[#FF5500]/20 animate-ping" />
-          <span className="absolute inset-2 rounded-full bg-[#FF5500]/15 animate-ping" style={{ animationDelay: "0.15s" }} />
-        </>
+    <button
+      onPointerDown={onPointerDown}
+      onPointerUp={onPointerUp}
+      onPointerLeave={onPointerUp}
+      aria-label={listening ? "Release to send" : "Hold to speak"}
+      className="relative flex items-center justify-center w-12 h-12 shrink-0 transition-all duration-150"
+      style={{
+        borderRadius: "50%",
+        background: listening
+          ? "linear-gradient(135deg, var(--color-primary-500), var(--color-primary-700))"
+          : "var(--color-surface-2)",
+        boxShadow: listening
+          ? "var(--shadow-glow-orange), var(--shadow-clay-soft)"
+          : "var(--shadow-clay)",
+        animation: listening ? "mic-pulse 1.5s ease-in-out infinite" : "none",
+      }}
+    >
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+        stroke={listening ? "white" : "var(--color-text-muted)"}
+        strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+        <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+        <line x1="12" y1="19" x2="12" y2="23" />
+        <line x1="8" y1="23" x2="16" y2="23" />
+      </svg>
+    </button>
+  );
+}
+
+/* ─── Dot loader ─────────────────────────────────────────────── */
+function DotLoader() {
+  return (
+    <div className="flex gap-1 items-center px-1 py-1">
+      {[0, 1, 2].map((i) => (
+        <div
+          key={i}
+          className="w-1.5 h-1.5 rounded-full"
+          style={{
+            background: "var(--color-primary-400)",
+            animation: `bounce 1.2s ease-in-out ${i * 0.15}s infinite`,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+/* ─── Single chat bubble ─────────────────────────────────────── */
+function ChatBubble({ msg }: { msg: ChatMessage }) {
+  const isUser = msg.role === "user";
+
+  return (
+    <div className={`flex ${isUser ? "justify-end" : "justify-start"} mb-3`}>
+      {/* Avatar — assistant only */}
+      {!isUser && (
+        <div
+          className="w-7 h-7 mr-2 shrink-0 flex items-center justify-center text-white text-xs font-black self-end mb-1"
+          style={{
+            borderRadius: "50%",
+            background: "linear-gradient(135deg, var(--color-primary-500), var(--color-primary-700))",
+          }}
+        >
+          B
+        </div>
       )}
-      <div
-        className={`relative z-10 w-16 h-16 rounded-full flex items-center justify-center transition-colors duration-200 ${
-          active ? "bg-[#FF5500]" : "bg-[#0A0A0A]"
-        }`}
-      >
-        <span className="text-2xl">{active ? "🔴" : "🎙️"}</span>
+
+      <div style={{ maxWidth: "80%" }}>
+        {/* Bubble */}
+        <div
+          className="px-4 py-3"
+          style={{
+            borderRadius: isUser
+              ? "var(--radius-md) var(--radius-md) 4px var(--radius-md)"
+              : "var(--radius-md) var(--radius-md) var(--radius-md) 4px",
+            background: isUser
+              ? "linear-gradient(135deg, var(--color-primary-500), var(--color-primary-600))"
+              : "var(--color-surface-0)",
+            boxShadow: isUser ? "var(--shadow-clay-soft)" : "var(--shadow-clay)",
+            border: isUser ? "none" : "1px solid rgba(255,255,255,0.5)",
+          }}
+        >
+          {msg.text ? (
+            <p
+              className="text-sm leading-relaxed"
+              style={{ color: isUser ? "white" : "var(--color-text-strong)" }}
+            >
+              {msg.text}
+              {/* Streaming cursor */}
+              {!isUser && !msg.why && msg.text && (
+                <span
+                  className="inline-block w-0.5 h-3.5 ml-0.5 align-middle"
+                  style={{ background: "var(--color-primary-400)", animation: "blink 1s step-end infinite" }}
+                />
+              )}
+            </p>
+          ) : (
+            <DotLoader />
+          )}
+        </div>
+
+        {/* Structured WHY / WHAT / ₹ — only for final assistant messages */}
+        {!isUser && (msg.why || msg.what) && (
+          <div className="mt-2 space-y-1.5">
+            {msg.why && (
+              <div
+                className="px-3 py-2"
+                style={{
+                  borderRadius: "var(--radius-sm)",
+                  background: "var(--color-surface-1)",
+                  borderLeft: "3px solid var(--color-error)",
+                  boxShadow: "var(--shadow-clay-inset)",
+                }}
+              >
+                <p className="text-[9px] font-black uppercase tracking-widest mb-0.5" style={{ color: "var(--color-error)" }}>
+                  Kyun
+                </p>
+                <p className="text-xs leading-relaxed" style={{ color: "var(--color-text-base)" }}>
+                  {msg.why}
+                </p>
+              </div>
+            )}
+            {msg.what && (
+              <div
+                className="px-3 py-2"
+                style={{
+                  borderRadius: "var(--radius-sm)",
+                  background: "var(--color-surface-1)",
+                  borderLeft: "3px solid var(--color-info)",
+                  boxShadow: "var(--shadow-clay-inset)",
+                }}
+              >
+                <p className="text-[9px] font-black uppercase tracking-widest mb-0.5" style={{ color: "var(--color-info)" }}>
+                  Kya Karen
+                </p>
+                <p className="text-xs leading-relaxed" style={{ color: "var(--color-text-base)" }}>
+                  {msg.what}
+                </p>
+              </div>
+            )}
+            {msg.rupeesImpact !== undefined && msg.rupeesImpact !== 0 && (
+              <div
+                className="px-3 py-2 flex items-center justify-between"
+                style={{
+                  borderRadius: "var(--radius-sm)",
+                  background: "linear-gradient(135deg, var(--color-primary-500), var(--color-primary-700))",
+                }}
+              >
+                <span className="text-[9px] font-black uppercase tracking-widest text-white/80">
+                  Expected Impact
+                </span>
+                <span className="text-sm font-black text-white">
+                  {msg.rupeesImpact > 0 ? "+" : ""}₹
+                  {Math.abs(msg.rupeesImpact).toLocaleString("en-IN")}
+                </span>
+              </div>
+            )}
+          </div>
+        )}
+
+        <p
+          className="text-[9px] mt-1 px-1"
+          style={{ color: "var(--color-text-soft)", textAlign: isUser ? "right" : "left" }}
+        >
+          {new Date(msg.timestamp).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
+        </p>
       </div>
     </div>
   );
 }
 
-interface Props {
-  open: boolean;
-  onClose: () => void;
-}
-
-type Phase = "idle" | "listening" | "processing" | "result" | "error";
-
+/* ─── Voice Chat Session Panel ───────────────────────────────── */
 export default function VoiceModal({ open, onClose }: Props) {
-  const [phase, setPhase] = useState<Phase>("idle");
-  const [transcript, setTranscript] = useState("");
-  const [result, setResult] = useState<VoiceResponse | null>(null);
-  const [errorMsg, setErrorMsg] = useState("");
+  const { shopId } = useShopStore();
+  const {
+    isListening, isProcessing, messages, error, sessionId,
+    reset, clearSession,
+  } = useVoiceStore();
 
-  const wsRef = useRef<WebSocket | null>(null);
-  const mediaRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
+  const { startVoice, stopVoice, sendTextQuery, disconnect } = useVoiceCapture(shopId ?? 1);
 
-  // Cleanup on unmount or close
+  const [inputText, setInputText] = useState("");
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const SUGGESTIONS = [
+    "Mera rice sales kyun gir raha hai?",
+    "Is hafte kya stock karoon?",
+    "Mere profit ka andaza lagao",
+  ];
+
+  /* Auto-scroll to bottom on new messages */
   useEffect(() => {
-    if (!open) {
-      stopRecording();
-      wsRef.current?.close();
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  }, [messages, isProcessing]);
 
-  const stopRecording = useCallback(() => {
-    if (mediaRef.current && mediaRef.current.state !== "inactive") {
-      mediaRef.current.stop();
-    }
-  }, []);
-
-  const handleClose = () => {
-    stopRecording();
-    wsRef.current?.close();
-    setPhase("idle");
-    setTranscript("");
-    setResult(null);
-    setErrorMsg("");
+  /* Cleanup on close — keep session in store */
+  const handleClose = useCallback(() => {
+    if (isListening) stopVoice();
+    reset();   // resets turn state, keeps messages[]
     onClose();
-  };
+  }, [isListening, stopVoice, reset, onClose]);
 
-  const handleTap = async () => {
-    if (phase === "listening") {
-      stopRecording();
-      return;
+  /* On full disconnect */
+  const handleEndSession = useCallback(() => {
+    disconnect();
+    clearSession();
+    onClose();
+  }, [disconnect, clearSession, onClose]);
+
+  const handleSendText = useCallback(async () => {
+    const text = inputText.trim();
+    if (!text || isProcessing) return;
+    setInputText("");
+    await sendTextQuery(text);
+  }, [inputText, isProcessing, sendTextQuery]);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSendText();
     }
+  }, [handleSendText]);
 
-    setPhase("listening");
-    setTranscript("");
-    setResult(null);
-    setErrorMsg("");
+  /* Hold-to-speak mic */
+  const handleMicDown = useCallback(async () => {
+    await startVoice();
+  }, [startVoice]);
 
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      chunksRef.current = [];
-      const recorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
-      mediaRef.current = recorder;
-
-      recorder.ondataavailable = (e) => {
-        if (e.data.size > 0) chunksRef.current.push(e.data);
-      };
-
-      recorder.onstop = async () => {
-        stream.getTracks().forEach((t) => t.stop());
-        setPhase("processing");
-        await sendAudio();
-      };
-
-      recorder.start();
-
-      // Auto-stop after 8 seconds
-      setTimeout(() => {
-        if (recorder.state !== "inactive") recorder.stop();
-      }, 8000);
-    } catch {
-      setPhase("error");
-      setErrorMsg("Microphone access denied. Please allow microphone permission.");
-    }
-  };
-
-  const sendAudio = async () => {
-    const blob = new Blob(chunksRef.current, { type: "audio/webm" });
-    const token = typeof window !== "undefined" ? localStorage.getItem("bv_token") : null;
-
-    // Try WebSocket flow first
-    const wsUrl = `${WS_URL}/ws/voice/1`;
-    try {
-      const ws = new WebSocket(wsUrl);
-      wsRef.current = ws;
-
-      ws.onopen = () => {
-        ws.send(blob);
-      };
-
-      ws.onmessage = (evt) => {
-        try {
-          const data = JSON.parse(evt.data) as {
-            type: string;
-            transcript?: string;
-            why_text?: string;
-            what_text?: string;
-            rupees_impact?: number;
-            response_text?: string;
-          };
-          if (data.type === "transcript") {
-            setTranscript(data.transcript ?? "");
-          }
-          if (data.type === "result") {
-            setResult(data);
-            setPhase("result");
-          }
-          if (data.type === "error") {
-            throw new Error(data.response_text ?? "WebSocket error");
-          }
-        } catch {
-          // Non-JSON (binary TTS audio) — ignore here
-        }
-      };
-
-      ws.onerror = () => fallbackToRest(token);
-      ws.onclose = (e) => {
-        if (e.code !== 1000 && phase !== "result") fallbackToRest(token);
-      };
-
-      // Timeout safety
-      setTimeout(() => {
-        if (phase === "processing") fallbackToRest(token);
-      }, 12000);
-    } catch {
-      await fallbackToRest(token);
-    }
-  };
-
-  const fallbackToRest = async (token: string | null) => {
-    // If we have a transcript, use it; otherwise use a placeholder
-    const text = transcript || "Check my sales status";
-    const shopId = token ? 1 : 1; // TODO: read from store/localStorage
-
-    try {
-      const res = await voiceQuery(shopId, text);
-      setResult(res as VoiceResponse);
-      setPhase("result");
-    } catch {
-      setPhase("error");
-      setErrorMsg("Could not reach BizVaani. Check your connection.");
-    }
-  };
+  const handleMicUp = useCallback(() => {
+    if (isListening) stopVoice();
+  }, [isListening, stopVoice]);
 
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end" style={{ fontFamily: "'Helvetica Neue', Arial, sans-serif" }}>
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/60" onClick={handleClose} />
+    <div className="fixed inset-0 z-50 flex items-end lg:items-center lg:justify-end lg:pr-6 lg:pb-6">
+      {/* Backdrop — mobile only */}
+      <div
+        className="absolute inset-0 lg:hidden"
+        style={{ background: "rgba(36,29,23,0.55)", backdropFilter: "blur(4px)" }}
+        onClick={handleClose}
+      />
 
-      {/* Sheet */}
-      <div className="relative w-full bg-white max-h-[85vh] overflow-y-auto">
-        {/* Handle */}
-        <div className="flex justify-center pt-3 pb-2">
-          <div className="w-10 h-1 bg-black/10" />
+      {/* Chat panel */}
+      <div
+        className="relative flex flex-col w-full lg:w-[420px]"
+        style={{
+          height: "clamp(480px, 70vh, 680px)",
+          background: "var(--color-surface-0)",
+          borderRadius: "var(--radius-xl) var(--radius-xl) 0 0",
+          boxShadow: "0 -20px 60px rgba(88,66,46,0.20)",
+        }}
+      >
+        {/* ── Header ── */}
+        <div
+          className="flex items-center justify-between px-5 py-4 shrink-0"
+          style={{
+            borderBottom: "1px solid var(--color-surface-2)",
+            borderRadius: "var(--radius-xl) var(--radius-xl) 0 0",
+          }}
+        >
+          <div className="flex items-center gap-2">
+            <div
+              className="w-8 h-8 flex items-center justify-center text-white text-xs font-black"
+              style={{
+                borderRadius: "50%",
+                background: "linear-gradient(135deg, var(--color-primary-500), var(--color-primary-700))",
+              }}
+            >
+              B
+            </div>
+            <div>
+              <p className="text-sm font-bold" style={{ color: "var(--color-text-strong)" }}>
+                BizVaani
+              </p>
+              {sessionId && (
+                <p className="text-[9px] uppercase tracking-widest" style={{ color: "var(--color-text-soft)" }}>
+                  Session #{sessionId}
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {messages.length > 0 && (
+              <button
+                onClick={handleEndSession}
+                className="text-xs px-3 py-1.5 rounded-full transition-opacity hover:opacity-80"
+                style={{
+                  background: "var(--color-surface-2)",
+                  color: "var(--color-text-muted)",
+                }}
+              >
+                New Session
+              </button>
+            )}
+            <button
+              onClick={handleClose}
+              className="w-7 h-7 flex items-center justify-center"
+              style={{ borderRadius: "50%", background: "var(--color-surface-2)", color: "var(--color-text-muted)" }}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </div>
         </div>
 
-        {/* Close */}
-        <button
-          onClick={handleClose}
-          className="absolute top-4 right-5 text-black/30 hover:text-black/60 text-xs font-black uppercase tracking-widest transition-colors"
+        {/* ── Messages area ── */}
+        <div
+          ref={scrollRef}
+          className="flex-1 overflow-y-auto px-4 py-4"
+          style={{ scrollBehavior: "smooth" }}
         >
-          Close ×
-        </button>
-
-        <div className="px-6 pb-10 pt-2">
-          {/* Label */}
-          <p className="text-[10px] font-bold tracking-[0.3em] text-black/30 uppercase mb-8">
-            {phase === "idle" && "Tap to speak"}
-            {phase === "listening" && "Listening..."}
-            {phase === "processing" && "Processing..."}
-            {phase === "result" && "BizVaani says"}
-            {phase === "error" && "Error"}
-          </p>
-
-          {/* Mic */}
-          {(phase === "idle" || phase === "listening") && (
-            <div className="flex flex-col items-center gap-6">
-              <button onClick={handleTap}>
-                <PulseRing active={phase === "listening"} />
-              </button>
-
-              <p className="text-sm text-black/40 text-center max-w-[200px] leading-relaxed">
-                {phase === "listening"
-                  ? "Tap to stop · auto-stops in 8s"
-                  : "Ask why sales dropped, what to stock, or any business question"}
+          {/* Empty state */}
+          {messages.length === 0 && !isProcessing && (
+            <div className="flex flex-col items-center justify-center h-full gap-4">
+              <div className="text-4xl">🎙️</div>
+              <p className="text-sm font-semibold text-center" style={{ color: "var(--color-text-muted)" }}>
+                BizVaani se poochho
               </p>
-
-              {/* Example queries */}
-              {phase === "idle" && (
-                <div className="w-full space-y-2 mt-2">
-                  {["Why did rice sales drop?", "What should I stock this week?", "Generate invoice for Suresh"].map((ex) => (
-                    <button
-                      key={ex}
-                      onClick={() => {
-                        setTranscript(ex);
-                        setPhase("processing");
-                        voiceQuery(1, ex).then((r) => {
-                          setResult(r as VoiceResponse);
-                          setPhase("result");
-                        }).catch(() => {
-                          setPhase("error");
-                          setErrorMsg("Failed to reach BizVaani.");
-                        });
-                      }}
-                      className="w-full text-left px-4 py-3 border border-black/8 text-sm text-black/50 hover:border-[#FF5500] hover:text-[#0A0A0A] transition-all"
-                    >
-                      &ldquo;{ex}&rdquo;
-                    </button>
-                  ))}
-                </div>
-              )}
+              <p className="text-xs text-center" style={{ color: "var(--color-text-soft)" }}>
+                Hindi, Telugu ya English mein
+              </p>
+              <div className="w-full space-y-2 mt-2">
+                {SUGGESTIONS.map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => sendTextQuery(s)}
+                    className="w-full text-left px-4 py-2.5 text-sm transition-all duration-150"
+                    style={{
+                      borderRadius: "var(--radius-md)",
+                      background: "var(--color-surface-1)",
+                      color: "var(--color-text-base)",
+                      boxShadow: "var(--shadow-clay)",
+                      border: "1px solid rgba(255,255,255,0.45)",
+                    }}
+                  >
+                    &ldquo;{s}&rdquo;
+                  </button>
+                ))}
+              </div>
             </div>
           )}
 
-          {/* Processing */}
-          {phase === "processing" && (
-            <div className="flex flex-col items-center gap-4 py-8">
-              <div className="w-8 h-8 border-2 border-[#FF5500] border-t-transparent rounded-full animate-spin" />
-              {transcript && (
-                <p className="text-sm text-black/40 italic text-center">
-                  &ldquo;{transcript}&rdquo;
-                </p>
-              )}
-              <p className="text-xs text-black/20">Asking BizVaani...</p>
+          {/* Chat bubbles */}
+          {messages.map((msg) => (
+            <ChatBubble key={msg.id} msg={msg} />
+          ))}
+
+          {/* Error banner */}
+          {error && (
+            <div
+              className="mx-2 px-4 py-3 text-sm text-center"
+              style={{
+                borderRadius: "var(--radius-md)",
+                background: "rgba(214,79,69,0.10)",
+                color: "var(--color-error)",
+                border: "1px solid rgba(214,79,69,0.20)",
+              }}
+            >
+              {error}
+            </div>
+          )}
+        </div>
+
+        {/* ── Input bar ── */}
+        <div
+          className="shrink-0 px-4 py-3"
+          style={{
+            borderTop: "1px solid var(--color-surface-2)",
+            background: "var(--color-surface-1)",
+            borderRadius: "0 0 var(--radius-md) var(--radius-md)",
+          }}
+        >
+          {/* Listening indicator */}
+          {isListening && (
+            <div
+              className="flex items-center gap-2 px-3 py-2 mb-2 text-xs font-semibold"
+              style={{
+                borderRadius: "var(--radius-sm)",
+                background: "rgba(234,122,34,0.10)",
+                color: "var(--color-primary-500)",
+                border: "1px solid rgba(234,122,34,0.20)",
+              }}
+            >
+              <span style={{ animation: "mic-pulse 1s ease-in-out infinite", display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: "var(--color-primary-500)" }} />
+              Sun raha hai... chhodein to bhejega
             </div>
           )}
 
-          {/* Result */}
-          {phase === "result" && result && (
-            <div className="space-y-4">
-              {transcript && (
-                <p className="text-xs text-black/30 italic border-l-2 border-[#FF5500]/30 pl-3">
-                  &ldquo;{transcript}&rdquo;
-                </p>
-              )}
+          <div className="flex items-center gap-2">
+            {/* Mic — hold to speak */}
+            <MicButton
+              listening={isListening}
+              onPointerDown={handleMicDown}
+              onPointerUp={handleMicUp}
+            />
 
-              {[
-                { label: "WHY", content: result.why_text },
-                { label: "WHAT TO DO", content: result.what_text },
-              ].map(
-                (block) =>
-                  block.content && (
-                    <div key={block.label} className="border-l-2 border-[#FF5500] pl-4">
-                      <p className="text-[9px] font-black uppercase tracking-[0.3em] text-[#FF5500] mb-1">
-                        {block.label}
-                      </p>
-                      <p className="text-sm text-[#0A0A0A] leading-relaxed">{block.content}</p>
-                    </div>
-                  )
-              )}
-
-              {result.rupees_impact !== undefined && result.rupees_impact !== 0 && (
-                <div className="bg-[#FF5500] px-4 py-3 flex items-center justify-between">
-                  <span className="text-xs font-black uppercase tracking-widest text-white">₹ Impact</span>
-                  <span className="text-xl font-black text-white">
-                    {result.rupees_impact > 0 ? "+" : ""}₹{Math.abs(result.rupees_impact).toLocaleString("en-IN")}
-                  </span>
-                </div>
-              )}
-
-              <button
-                onClick={() => { setPhase("idle"); setTranscript(""); setResult(null); }}
-                className="w-full py-3 border-2 border-black/10 text-black/40 font-black text-xs tracking-widest uppercase hover:border-[#FF5500] hover:text-[#FF5500] transition-all"
-              >
-                Ask Again
-              </button>
+            {/* Text input */}
+            <div className="flex-1 relative">
+              <input
+                type="text"
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder={isListening ? "Bol dijiye..." : "Ya type karein..."}
+                disabled={isListening || isProcessing}
+                className="w-full px-4 py-2.5 text-sm"
+                style={{
+                  borderRadius: "var(--radius-md)",
+                  background: "var(--color-surface-0)",
+                  color: "var(--color-text-strong)",
+                  border: "1px solid var(--color-surface-3)",
+                  boxShadow: "var(--shadow-clay-inset)",
+                  outline: "none",
+                }}
+              />
             </div>
-          )}
 
-          {/* Error */}
-          {phase === "error" && (
-            <div className="space-y-4 text-center py-6">
-              <p className="text-2xl">⚠️</p>
-              <p className="text-sm text-red-600 font-bold">{errorMsg}</p>
-              <button
-                onClick={() => { setPhase("idle"); setErrorMsg(""); }}
-                className="px-6 py-3 bg-[#FF5500] text-white font-black text-xs tracking-widest uppercase"
-              >
-                Try Again
-              </button>
-            </div>
-          )}
+            {/* Send button */}
+            <button
+              onClick={handleSendText}
+              disabled={!inputText.trim() || isProcessing || isListening}
+              className="w-10 h-10 flex items-center justify-center transition-all duration-150"
+              style={{
+                borderRadius: "50%",
+                background: inputText.trim() && !isProcessing
+                  ? "linear-gradient(135deg, var(--color-primary-500), var(--color-primary-700))"
+                  : "var(--color-surface-2)",
+                boxShadow: inputText.trim() ? "var(--shadow-clay-soft)" : "none",
+                opacity: !inputText.trim() || isProcessing ? 0.5 : 1,
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                stroke={inputText.trim() ? "white" : "var(--color-text-muted)"}
+                strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="22" y1="2" x2="11" y2="13" />
+                <polygon points="22 2 15 22 11 13 2 9 22 2" />
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
+
+      <style>{`
+        @keyframes blink {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0; }
+        }
+      `}</style>
     </div>
   );
 }
