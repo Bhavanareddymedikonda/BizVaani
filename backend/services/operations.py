@@ -1,11 +1,15 @@
 """Deterministic operational actions for voice/chat."""
 from __future__ import annotations
 
+import json
+import os
 import re
 from datetime import date
 from typing import Any
 
+import httpx
 from fastapi import HTTPException
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.models import Product
@@ -19,6 +23,7 @@ from services.inventory import (
 
 CONFIRM_WORDS = {"confirm", "yes", "ok", "okay", "done", "proceed"}
 CANCEL_WORDS = {"cancel", "stop", "no", "discard"}
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 
 
 def _is_confirmation(query: str) -> bool:
@@ -49,6 +54,24 @@ def _reply(
         "action": action,
         "pending_action": pending_action,
     }
+
+
+def _extract_json_object(content: str) -> dict[str, Any] | None:
+    cleaned = content.strip()
+    if cleaned.startswith("```"):
+        cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned)
+        cleaned = re.sub(r"\s*```$", "", cleaned)
+
+    try:
+        return json.loads(cleaned)
+    except json.JSONDecodeError:
+        match = re.search(r"\{.*\}", cleaned, re.DOTALL)
+        if not match:
+            return None
+        try:
+            return json.loads(match.group(0))
+        except json.JSONDecodeError:
+            return None
 
 
 async def _product_payload(product: Product) -> dict:
@@ -140,9 +163,183 @@ async def _parse_sales_entry(query: str, shop_id: int, db: AsyncSession) -> dict
     )
 
 
+async def _extract_invoice_draft_with_llm(query: str, shop_id: int, db: AsyncSession) -> dict[str, Any] | None:
+    if not GROQ_API_KEY:
+        return None
+
+    product_result = await db.execute(select(Product).where(Product.shop_id == shop_id).order_by(Product.name.asc()))
+    products = product_result.scalars().all()
+    product_catalog = [
+        {
+            "product_id": product.id,
+            "name": product.name,
+            "unit": product.unit,
+            "selling_price": float(product.selling_price or 0),
+            "stock_qty": float(product.stock_qty or 0),
+        }
+        for product in products
+    ]
+
+    system_prompt = """You extract invoice drafts for a kirana store assistant.
+Return valid JSON only. Do not add markdown.
+
+Schema:
+{
+  "customer_name": string | null,
+  "customer_gstin": string | null,
+  "items": [
+    {
+      "product": string,
+      "product_id": number | null,
+      "qty": number,
+      "unit_price": number | null
+    }
+  ],
+  "missing_fields": string[],
+  "needs_clarification": boolean,
+  "clarification_question": string | null
+}
+
+Rules:
+- Extract customer name and line items from natural language.
+- Handle compact quantity forms like 100kg, 2pcs, 5ltr.
+- If a product likely matches the catalog, use that product_id.
+- If unit_price is not stated but product exists in catalog, use the catalog selling price.
+- If required information is missing, set needs_clarification true and list missing_fields.
+"""
+
+    user_prompt = json.dumps(
+        {
+            "user_query": query,
+            "product_catalog": product_catalog,
+        },
+        ensure_ascii=True,
+    )
+
+    try:
+        async with httpx.AsyncClient(timeout=20) as client:
+            response = await client.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {GROQ_API_KEY}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": "llama-3.3-70b-versatile",
+                    "temperature": 0,
+                    "max_tokens": 500,
+                    "messages": [
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt},
+                    ],
+                },
+            )
+            if response.status_code != 200:
+                return None
+
+            content = response.json()["choices"][0]["message"]["content"]
+            return _extract_json_object(content)
+    except Exception:
+        return None
+
+
+async def _build_invoice_reply_from_payload(payload: dict[str, Any], shop_id: int, db: AsyncSession) -> dict:
+    customer_name = str(payload.get("customer_name") or "Walk-in Customer").strip() or "Walk-in Customer"
+    customer_gstin = payload.get("customer_gstin")
+    raw_items = payload.get("items") or []
+
+    items: list[dict[str, Any]] = []
+    subtotal = 0.0
+    for raw_item in raw_items:
+        product = None
+        product_id = raw_item.get("product_id")
+        if isinstance(product_id, int):
+            product_result = await db.execute(
+                select(Product).where(Product.id == product_id, Product.shop_id == shop_id)
+            )
+            product = product_result.scalar_one_or_none()
+        if not product and raw_item.get("product"):
+            product = await find_product_by_name(db, shop_id, str(raw_item["product"]))
+
+        qty = float(raw_item.get("qty") or 0)
+        if qty <= 0:
+            continue
+
+        unit_price_value = raw_item.get("unit_price")
+        if unit_price_value is None and product:
+            unit_price_value = float(product.selling_price or 0)
+        if unit_price_value is None:
+            continue
+
+        unit_price = float(unit_price_value)
+        amount = round(qty * unit_price, 2)
+        subtotal += amount
+        items.append(
+            {
+                "product_id": product.id if product else None,
+                "product": product.name if product else str(raw_item.get("product", "")).strip(),
+                "qty": qty,
+                "unit_price": unit_price,
+                "gst_rate": 5,
+                "amount": amount,
+                "stock_available": float(product.stock_qty or 0) if product else None,
+            }
+        )
+
+    if not items:
+        return _reply(
+            text="I need at least one valid invoice item before I can draft the invoice.",
+            what="Try: create invoice with 100kg rice at 50 and 1 sugar at 40",
+            action={"kind": "invoice_draft", "status": "needs_input", "requires_confirmation": False},
+        )
+
+    total_gst = round(sum(item["amount"] * 0.05 for item in items), 2)
+    total = round(subtotal + total_gst, 2)
+    invoice_payload = {
+        "customer_name": customer_name,
+        "customer_gstin": customer_gstin,
+        "items": items,
+        "subtotal": round(subtotal, 2),
+        "cgst": round(total_gst / 2, 2),
+        "sgst": round(total_gst / 2, 2),
+        "total": total,
+    }
+
+    return _reply(
+        text=f"Invoice draft ready for {customer_name}.",
+        why=f"I extracted {len(items)} line item(s) with an estimated total of Rs.{total:,.2f}.",
+        what="Say confirm to generate the invoice and deduct stock for matched products.",
+        rupees_impact=total,
+        action={
+            "kind": "invoice_draft",
+            "status": "draft",
+            "requires_confirmation": True,
+            "summary": f"Invoice for {customer_name} totalling Rs.{total:,.2f}",
+            "payload": invoice_payload,
+        },
+        pending_action={"kind": "invoice_draft", "payload": invoice_payload},
+    )
+
+
 async def _parse_invoice_request(query: str, shop_id: int, db: AsyncSession) -> dict | None:
     if not re.search(r"\b(invoice|receipt|bill)\b", query, re.IGNORECASE):
         return None
+
+    llm_payload = await _extract_invoice_draft_with_llm(query, shop_id, db)
+    if llm_payload:
+        if llm_payload.get("needs_clarification"):
+            missing_fields = [field for field in (llm_payload.get("missing_fields") or []) if field != "customer_name"]
+            if not missing_fields:
+                llm_payload["needs_clarification"] = False
+                llm_payload["customer_name"] = llm_payload.get("customer_name") or "Walk-in Customer"
+                return await _build_invoice_reply_from_payload(llm_payload, shop_id, db)
+            return _reply(
+                text="I need one more detail before I can draft this invoice.",
+                why=", ".join(missing_fields) or "",
+                what=str(llm_payload.get("clarification_question") or "Tell me the missing customer or item details."),
+                action={"kind": "invoice_draft", "status": "needs_input", "requires_confirmation": False},
+            )
+        return await _build_invoice_reply_from_payload(llm_payload, shop_id, db)
 
     customer_match = re.search(
         r"(?:invoice|receipt|bill)\s+(?:for\s+)?([a-zA-Z][a-zA-Z\s]+?)\s+(?:for|with)\s+(.+)$",
@@ -151,8 +348,8 @@ async def _parse_invoice_request(query: str, shop_id: int, db: AsyncSession) -> 
     )
     if not customer_match:
         return _reply(
-            text="I can generate invoices from chat, but I need a customer and items in one line.",
-            what="Try: create invoice for Ramesh with 2 rice at 50 and 1 sugar at 40",
+            text="I can generate invoices from chat, but I need at least the items in one line.",
+            what="Try: create invoice with 2 rice at 50 and 1 sugar at 40",
             action={"kind": "invoice_draft", "status": "needs_input", "requires_confirmation": False},
         )
 
@@ -169,50 +366,20 @@ async def _parse_invoice_request(query: str, shop_id: int, db: AsyncSession) -> 
             what="Try: create invoice for Ramesh with 2 rice at 50 and 1 sugar at 40",
         )
 
-    items: list[dict[str, Any]] = []
-    subtotal = 0.0
-    for qty_text, name_text, price_text in item_matches:
-        product = await find_product_by_name(db, shop_id, name_text.strip())
-        unit_price = float(price_text) if price_text else float(product.selling_price if product else 0)
-        qty = float(qty_text)
-        amount = round(qty * unit_price, 2)
-        subtotal += amount
-        items.append(
-            {
-                "product_id": product.id if product else None,
-                "product": product.name if product else name_text.strip(),
-                "qty": qty,
-                "unit_price": unit_price,
-                "gst_rate": 5,
-                "amount": amount,
-                "stock_available": float(product.stock_qty or 0) if product else None,
-            }
-        )
-
-    total_gst = round(subtotal * 0.05, 2)
-    total = round(subtotal + total_gst, 2)
-    payload = {
+    fallback_payload = {
         "customer_name": customer_name,
-        "items": items,
-        "subtotal": round(subtotal, 2),
-        "cgst": round(total_gst / 2, 2),
-        "sgst": round(total_gst / 2, 2),
-        "total": total,
+        "customer_gstin": None,
+        "items": [
+            {
+                "product": name_text.strip(),
+                "product_id": None,
+                "qty": float(qty_text),
+                "unit_price": float(price_text) if price_text else None,
+            }
+            for qty_text, name_text, price_text in item_matches
+        ],
     }
-    return _reply(
-        text=f"Invoice draft ready for {customer_name}.",
-        why=f"I parsed {len(items)} line item(s) with an estimated total of Rs.{total:,.2f}.",
-        what="Say confirm to generate the invoice and deduct stock for matched products.",
-        rupees_impact=total,
-        action={
-            "kind": "invoice_draft",
-            "status": "draft",
-            "requires_confirmation": True,
-            "summary": f"Invoice for {customer_name} totalling Rs.{total:,.2f}",
-            "payload": payload,
-        },
-        pending_action={"kind": "invoice_draft", "payload": payload},
-    )
+    return await _build_invoice_reply_from_payload(fallback_payload, shop_id, db)
 
 
 async def _handle_inventory_query(query: str, shop_id: int, db: AsyncSession) -> dict | None:

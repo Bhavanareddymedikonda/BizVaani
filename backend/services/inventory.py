@@ -138,6 +138,45 @@ async def upsert_sales_entry_and_adjust_stock(
     return sales_entry, quantity_diff
 
 
+async def add_sales_entry_without_stock_adjustment(
+    db: AsyncSession,
+    *,
+    shop_id: int,
+    product_id: int,
+    entry_date: date,
+    quantity_delta: float,
+    revenue_delta: float,
+    source: str,
+) -> SalesEntry:
+    await get_product_or_404(db, shop_id, product_id)
+    existing_result = await db.execute(
+        select(SalesEntry).where(
+            SalesEntry.shop_id == shop_id,
+            SalesEntry.product_id == product_id,
+            SalesEntry.entry_date == entry_date,
+        )
+    )
+    row = existing_result.scalar_one_or_none()
+
+    if row:
+        row.quantity_sold = round(float(row.quantity_sold or 0) + quantity_delta, 3)
+        row.revenue = round(float(row.revenue or 0) + revenue_delta, 2)
+        row.entry_source = source
+        return row
+
+    sales_entry = SalesEntry(
+        shop_id=shop_id,
+        product_id=product_id,
+        entry_date=entry_date,
+        quantity_sold=round(quantity_delta, 3),
+        revenue=round(revenue_delta, 2),
+        entry_source=source,
+    )
+    db.add(sales_entry)
+    await db.flush()
+    return sales_entry
+
+
 def stock_status(stock_qty: float, minimum_required: float) -> str:
     if stock_qty <= 0 or stock_qty < minimum_required * 0.5:
         return "CRITICAL"

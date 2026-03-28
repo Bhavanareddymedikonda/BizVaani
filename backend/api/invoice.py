@@ -1,6 +1,6 @@
-"""Invoice routes with preview, confirmation, stock deduction, and PDF generation."""
+"""Invoice routes with preview, confirmation, stock deduction, sales history, and PDF generation."""
 import io
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from core.auth_utils import TokenData, get_current_user
 from db.database import get_db
 from db.models import Invoice, Product, Shop
-from services.inventory import apply_stock_change, find_product_by_name
+from services.inventory import add_sales_entry_without_stock_adjustment, apply_stock_change, find_product_by_name
 
 router = APIRouter()
 
@@ -26,7 +26,7 @@ class InvoiceItem(BaseModel):
 
 class GenerateInvoiceRequest(BaseModel):
     shop_id: int
-    customer_name: str
+    customer_name: str | None = None
     customer_gstin: str | None = None
     items: list[InvoiceItem]
 
@@ -92,7 +92,7 @@ async def _build_invoice_payload(db: AsyncSession, shop_id: int, req: GenerateIn
             "shop_name": shop.shop_name if shop else "BizVaani Store",
             "gstin": shop.gstin if shop else None,
         },
-        "customer_name": req.customer_name,
+        "customer_name": req.customer_name or "Walk-in Customer",
         "customer_gstin": req.customer_gstin,
         "items": items_data,
         "subtotal": round(subtotal, 2),
@@ -124,7 +124,7 @@ async def generate_invoice(
     invoice = Invoice(
         shop_id=shop_id,
         invoice_number=invoice_number,
-        customer_name=req.customer_name,
+        customer_name=payload["customer_name"],
         customer_gstin=req.customer_gstin,
         items=payload["items"],
         subtotal=payload["subtotal"],
@@ -148,7 +148,16 @@ async def generate_invoice(
             unit_price=float(item["unit_price"]),
             reference_type="invoice",
             reference_id=invoice.id,
-            notes=f"Invoice {invoice_number} for {req.customer_name}",
+            notes=f"Invoice {invoice_number} for {payload['customer_name']}",
+        )
+        await add_sales_entry_without_stock_adjustment(
+            db,
+            shop_id=shop_id,
+            product_id=product_id,
+            entry_date=date.today(),
+            quantity_delta=float(item["qty"]),
+            revenue_delta=float(item["amount"]),
+            source="invoice",
         )
 
     await db.commit()
