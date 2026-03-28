@@ -19,6 +19,7 @@ from agent.nodes import (
     classify_intent,
     fetch_sales_data,
     fetch_market_data,
+    fetch_web_context,
     generate_response,
 )
 
@@ -42,6 +43,7 @@ async def run_agent(
         "sales_data": None,
         "market_data": None,
         "forecast_data": None,
+        "web_context": None,
         "intent": None,
         "why_text": None,
         "what_text": None,
@@ -60,10 +62,12 @@ async def run_agent(
     # Nodes 2 & 3: Sequential execution (Shared DB sessions are not coroutine-safe)
     state_sales = await fetch_sales_data(dict(state), db)  # type: ignore
     state_market = await fetch_market_data(dict(state_sales), db)  # type: ignore
+    state_web = await fetch_web_context(dict(state_market), db)  # type: ignore
 
     # Merge parallel results back into state
     state["sales_data"] = state_sales.get("sales_data")
     state["market_data"] = state_market.get("market_data")
+    state["web_context"] = state_web.get("web_context")
 
     # Node 4: Generate response
     state = await generate_response(state, db)

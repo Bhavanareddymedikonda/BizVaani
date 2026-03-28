@@ -38,7 +38,7 @@ _LANG_CODE_MAP = {
 
 def _lang_to_code(lang: str) -> str:
     """Convert short lang code to BCP-47 for Sarvam API."""
-    return _LANG_CODE_MAP.get(lang, "hi-IN")
+    return _LANG_CODE_MAP.get(lang, "en-IN")
 
 
 class VoiceQueryRequest(BaseModel):
@@ -48,7 +48,7 @@ class VoiceQueryRequest(BaseModel):
 
 class TTSRequest(BaseModel):
     text: str
-    language: str = "hi"
+    language: str = "en"
     voice: str = "shubh"  # bulbul:v3 speakers are lowercase: shubh, priya, meera, ritu, etc.
 
 
@@ -99,7 +99,7 @@ async def proxy_stt(
                 },
                 data={
                     "model": "saaras:v3",
-                    "mode": "transcribe",
+                    "mode": "translate",
                     "with_timestamps": "false",
                 },
             )
@@ -113,7 +113,7 @@ async def proxy_stt(
             data = resp.json()
             return {
                 "transcript": data.get("transcript", ""),
-                "language_detected": data.get("language_code", "hi-IN"),
+                "language_detected": data.get("language_code", "en-IN"),
             }
 
     except httpx.TimeoutException:

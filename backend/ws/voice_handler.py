@@ -47,7 +47,7 @@ _LANG_CODE_MAP = {
 
 
 def _lang_to_code(lang: str) -> str:
-    return _LANG_CODE_MAP.get(lang, "hi-IN")
+    return _LANG_CODE_MAP.get(lang, "en-IN")
 
 
 # ── Session store (in-memory, per WebSocket connection) ─────────────────
@@ -84,7 +84,8 @@ async def voice_websocket(
     session_id = str(uuid.uuid4())[:8]
     conversation_history: list[dict] = []   # [{role, text}, ...]
     audio_buffer = bytearray()
-    language = "hi"
+    language = "en"
+    audio_mime_type = "audio/webm"
 
     # Announce session start
     await websocket.send_json({
@@ -188,11 +189,15 @@ async def voice_websocket(
                     if lang_override:
                         language = lang_override
 
+                    mime_override = msg.get("mime_type")
+                    if mime_override:
+                        audio_mime_type = mime_override
+
                     if not audio_buffer:
                         await websocket.send_json({"type": "error", "text": "No audio received"})
                         continue
 
-                    transcript = await _run_stt(bytes(audio_buffer), language)
+                    transcript = await _run_stt(bytes(audio_buffer), language, audio_mime_type)
                     audio_buffer.clear()
 
                     if not transcript:
@@ -250,8 +255,18 @@ async def voice_websocket(
 
 # ── STT ─────────────────────────────────────────────────────────────────
 
-async def _run_stt(audio_bytes: bytes, language: str = "hi") -> str | None:
-    """Call Sarvam STT (saaras:v3). Returns transcript or None."""
+def _mime_to_filename(mime_type: str) -> str:
+    if "ogg" in mime_type:
+        return "audio.ogg"
+    if "wav" in mime_type:
+        return "audio.wav"
+    if "mp4" in mime_type or "mpeg" in mime_type:
+        return "audio.m4a"
+    return "audio.webm"
+
+
+async def _run_stt(audio_bytes: bytes, language: str = "en", mime_type: str = "audio/webm") -> str | None:
+    """Call Sarvam STT in translate mode so multilingual speech maps to English."""
     if not SARVAM_API_KEY:
         raise RuntimeError("SARVAM_API_KEY is not configured for real STT operation.")
 
@@ -260,12 +275,11 @@ async def _run_stt(audio_bytes: bytes, language: str = "hi") -> str | None:
             resp = await client.post(
                 SARVAM_STT_URL,
                 headers={"api-subscription-key": SARVAM_API_KEY},
-                files={"file": ("audio.wav", audio_bytes, "audio/wav")},
+                files={"file": (_mime_to_filename(mime_type), audio_bytes, mime_type)},
                 data={
                     "model": "saaras:v3",
-                    "mode": "transcribe",
+                    "mode": "translate",
                     "with_timestamps": "false",
-                    "language_code": _lang_to_code(language),
                 },
             )
             if resp.status_code == 200:
@@ -278,7 +292,7 @@ async def _run_stt(audio_bytes: bytes, language: str = "hi") -> str | None:
 
 # ── TTS ─────────────────────────────────────────────────────────────────
 
-async def _run_tts(text: str, language: str = "hi") -> bytes | None:
+async def _run_tts(text: str, language: str = "en") -> bytes | None:
     """Call Sarvam TTS (bulbul:v3). Returns raw audio bytes or None."""
     if not SARVAM_API_KEY:
         return None

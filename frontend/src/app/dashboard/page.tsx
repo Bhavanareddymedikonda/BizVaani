@@ -5,6 +5,7 @@ import { getDashboard } from "../../lib/api";
 import ProductCard from "../../components/ProductCard";
 import AlertCard from "../../components/AlertCard";
 import BottomNav from "../../components/BottomNav";
+import MicFAB from "../../components/MicFAB";
 
 // ============================================================
 // Dashboard Page — Task: Member C
@@ -134,6 +135,7 @@ export default function DashboardPage() {
         </section>
       </main>
 
+      <MicFAB />
       <BottomNav />
     </div>
   );

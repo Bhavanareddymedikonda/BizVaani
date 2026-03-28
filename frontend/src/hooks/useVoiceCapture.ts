@@ -6,18 +6,6 @@ import { useVoiceStore } from "@/store/useVoiceStore";
 const WS_BASE =
   process.env.NEXT_PUBLIC_API_URL?.replace(/^http/, "ws") ?? "ws://localhost:8000";
 
-/**
- * useVoiceCapture — Session-aware hook
- *
- * Single WebSocket stays open for the entire chat session.
- * Handles:
- *   - Binary audio streaming (MediaRecorder → server)
- *   - end_of_speech signal
- *   - text_query for typed input
- *   - chat_token streaming → updates assistant bubble in real-time
- *   - chat_done → finalizes bubble with why/what/₹
- *   - Binary TTS audio chunks → Web Audio API immediate playback
- */
 export function useVoiceCapture(shopId: number | null) {
   const {
     setListening, setProcessing, setError, setSessionId,
@@ -25,15 +13,14 @@ export function useVoiceCapture(shopId: number | null) {
     setTranscript,
   } = useVoiceStore();
 
-  const wsRef          = useRef<WebSocket | null>(null);
-  const recorderRef    = useRef<MediaRecorder | null>(null);
-  const streamRef      = useRef<MediaStream | null>(null);
-  const audioCtxRef    = useRef<AudioContext | null>(null);
-  // Tracks the current assistant bubble being streamed
-  const currentMsgId   = useRef<string | null>(null);
-  const streamedText   = useRef<string>("");
+  const wsRef = useRef<WebSocket | null>(null);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const currentMsgId = useRef<string | null>(null);
+  const streamedText = useRef<string>("");
+  const pendingStopRef = useRef<{ language: string } | null>(null);
 
-  /* ── Play raw audio buffer via Web Audio API ─────────────────── */
   const playAudio = useCallback(async (buffer: ArrayBuffer) => {
     try {
       if (!audioCtxRef.current || audioCtxRef.current.state === "closed") {
@@ -50,7 +37,6 @@ export function useVoiceCapture(shopId: number | null) {
     }
   }, []);
 
-  /* ── Initialize WebSocket once (keep-alive for session) ─────── */
   const ensureSocket = useCallback((): Promise<WebSocket> => {
     return new Promise((resolve, reject) => {
       if (!shopId) {
@@ -66,29 +52,26 @@ export function useVoiceCapture(shopId: number | null) {
       const token = localStorage.getItem("bv_token");
       const wsUrl = new URL(`${WS_BASE}/ws/voice/${shopId}`);
       if (token) wsUrl.searchParams.set("token", token);
-      
+
       const ws = new WebSocket(wsUrl.toString());
-      ws.binaryType = "arraybuffer";   // receive TTS as ArrayBuffer
+      ws.binaryType = "arraybuffer";
       wsRef.current = ws;
 
       ws.onopen = () => resolve(ws);
       ws.onerror = () => reject(new Error("WebSocket connection failed"));
 
       ws.onmessage = async (event) => {
-        /* Binary frame → TTS audio chunk */
         if (event.data instanceof ArrayBuffer) {
           await playAudio(event.data);
           return;
         }
 
-        /* Text frame → control/data message */
         try {
           const msg = JSON.parse(event.data as string) as {
             type: string;
             session_id?: string;
             text?: string;
             token?: string;
-            msg_id?: string;
             why?: string;
             what?: string;
             rupees_impact?: number;
@@ -100,7 +83,6 @@ export function useVoiceCapture(shopId: number | null) {
               break;
 
             case "transcript":
-              // Server echoed the user query — add user bubble
               if (msg.text) {
                 addUserMessage(msg.text);
                 setTranscript(msg.text);
@@ -109,14 +91,12 @@ export function useVoiceCapture(shopId: number | null) {
 
             case "thinking":
               setProcessing(true);
-              // Pre-create assistant bubble with empty text (will be streamed into)
               currentMsgId.current = _genId();
               streamedText.current = "";
               addAssistantMessage({ text: "", id: currentMsgId.current } as never);
               break;
 
             case "chat_token":
-              // Stream text into existing assistant bubble
               if (currentMsgId.current && msg.token) {
                 streamedText.current += msg.token;
                 updateAssistantMessage(currentMsgId.current, {
@@ -126,12 +106,11 @@ export function useVoiceCapture(shopId: number | null) {
               break;
 
             case "chat_done":
-              // Finalize the bubble with structured data
               if (currentMsgId.current) {
                 updateAssistantMessage(currentMsgId.current, {
-                  text:         msg.text ?? streamedText.current,
-                  why:          msg.why,
-                  what:         msg.what,
+                  text: msg.text ?? streamedText.current,
+                  why: msg.why,
+                  what: msg.what,
                   rupeesImpact: msg.rupees_impact,
                 });
                 currentMsgId.current = null;
@@ -157,7 +136,7 @@ export function useVoiceCapture(shopId: number | null) {
               break;
           }
         } catch {
-          // Non-JSON frame — ignore
+          // Ignore non-JSON frames.
         }
       };
 
@@ -165,10 +144,18 @@ export function useVoiceCapture(shopId: number | null) {
         wsRef.current = null;
       };
     });
-  }, [shopId, setSessionId, setProcessing, setError, setTranscript,
-      addUserMessage, addAssistantMessage, updateAssistantMessage, playAudio]);
+  }, [
+    shopId,
+    setSessionId,
+    setProcessing,
+    setError,
+    setTranscript,
+    addUserMessage,
+    addAssistantMessage,
+    updateAssistantMessage,
+    playAudio,
+  ]);
 
-  /* ── Start mic recording ─────────────────────────────────────── */
   const startVoice = useCallback(async () => {
     setError(null);
     let stream: MediaStream;
@@ -185,7 +172,7 @@ export function useVoiceCapture(shopId: number | null) {
       ws = await ensureSocket();
     } catch {
       setError(shopId ? "Could not connect to BizVaani. Check your internet." : "Shop session not ready yet. Please wait a moment.");
-      stream.getTracks().forEach((t) => t.stop());
+      stream.getTracks().forEach((track) => track.stop());
       return;
     }
 
@@ -196,32 +183,40 @@ export function useVoiceCapture(shopId: number | null) {
     const recorder = new MediaRecorder(stream, { mimeType });
     recorderRef.current = recorder;
 
-    recorder.ondataavailable = (e) => {
-      if (e.data.size > 0 && ws.readyState === WebSocket.OPEN) {
-        ws.send(e.data);   // binary audio chunk
+    recorder.ondataavailable = (event) => {
+      if (event.data.size > 0 && ws.readyState === WebSocket.OPEN) {
+        ws.send(event.data);
       }
     };
 
-    recorder.start(250);  // 250ms chunks
+    recorder.onstop = () => {
+      stream.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({
+          type: "end_of_speech",
+          language: pendingStopRef.current?.language ?? "en",
+          mime_type: recorder.mimeType || mimeType,
+        }));
+      }
+
+      pendingStopRef.current = null;
+    };
+
+    recorder.start(250);
     setListening(true);
   }, [ensureSocket, setListening, setError, shopId]);
 
-  /* ── Stop recording → signal server ─────────────────────────── */
-  const stopVoice = useCallback((language = "hi") => {
+  const stopVoice = useCallback((language = "en") => {
+    pendingStopRef.current = { language };
     recorderRef.current?.stop();
     recorderRef.current = null;
-    streamRef.current?.getTracks().forEach((t) => t.stop());
-    streamRef.current = null;
     setListening(false);
-
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({ type: "end_of_speech", language }));
-    }
     setProcessing(true);
   }, [setListening, setProcessing]);
 
-  /* ── Send a typed text query (no audio) ─────────────────────── */
-  const sendTextQuery = useCallback(async (text: string, language = "hi") => {
+  const sendTextQuery = useCallback(async (text: string, language = "en") => {
     setError(null);
     let ws: WebSocket;
     try {
@@ -234,28 +229,26 @@ export function useVoiceCapture(shopId: number | null) {
     setProcessing(true);
   }, [ensureSocket, setProcessing, setError, shopId]);
 
-  /* ── Clear session ───────────────────────────────────────────── */
   const clearSession = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({ type: "clear_session" }));
     }
   }, []);
 
-  /* ── Disconnect & cleanup ────────────────────────────────────── */
   const disconnect = useCallback(() => {
     recorderRef.current?.stop();
     recorderRef.current = null;
-    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current?.getTracks().forEach((track) => track.stop());
     streamRef.current = null;
     wsRef.current?.close();
     wsRef.current = null;
     audioCtxRef.current?.close().catch(() => {});
     audioCtxRef.current = null;
+    pendingStopRef.current = null;
     setListening(false);
     setProcessing(false);
   }, [setListening, setProcessing]);
 
-  /* Cleanup on unmount */
   useEffect(() => () => { disconnect(); }, [disconnect]);
 
   return { startVoice, stopVoice, sendTextQuery, clearSession, disconnect };

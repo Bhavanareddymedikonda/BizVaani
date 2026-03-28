@@ -1,5 +1,6 @@
 import { getInventory } from "@/lib/api";
 import BottomNav from "@/components/BottomNav";
+import MicFAB from "@/components/MicFAB";
 import InventoryCard from "@/components/InventoryCard";
 import { AlertTriangle, CheckCircle2 } from "lucide-react";
 
@@ -56,6 +57,7 @@ export default async function InventoryPage() {
 
       </main>
 
+      <MicFAB />
       <BottomNav />
     </div>
   );
