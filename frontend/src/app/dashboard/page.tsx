@@ -111,7 +111,7 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen pb-24 pt-20 font-sans selection:bg-[#c084fc] selection:text-white md:pb-0 md:pt-6">
-      <header className="mb-4 flex flex-col justify-between px-4 py-6 md:ml-20 md:flex-row md:items-center md:px-12">
+      <header className="mb-4 flex flex-col justify-between px-4 py-6 md:flex-row md:items-center md:px-12">
         <div>
           <h1 className="text-3xl font-black tracking-wide text-white">
             Good morning, <span className="text-[#c084fc]">{dashboard.user?.name || "Ramesh"}</span>
@@ -128,26 +128,26 @@ export default function DashboardPage() {
         </button>
       </header>
 
-      <main className="mx-auto max-w-7xl px-4 md:ml-20 md:px-12">
-        <section className="mb-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5 md:gap-6">
-          <div className="advanced-card col-span-1 min-w-0 overflow-hidden !border-none !bg-gradient-to-br !from-[#9333ea] !to-[#4c1d95] p-5 text-white shadow-[0_8px_32px_rgba(147,51,234,0.4)] sm:col-span-2 lg:col-span-1 md:p-6">
+      <main className="mx-auto max-w-7xl px-4 md:px-12">
+        <section className="mb-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-6 md:gap-6">
+          <div className="advanced-card col-span-1 min-w-0 overflow-hidden !border-none !bg-gradient-to-br !from-[#9333ea] !to-[#4c1d95] p-5 text-white shadow-[0_8px_32px_rgba(147,51,234,0.4)] sm:col-span-2 lg:col-span-2 md:p-6">
             <h2 className="mb-1 text-[11px] font-bold uppercase tracking-[0.18em] text-[#e9d5ff] opacity-90">Total Revenue Today</h2>
             <div className="mt-3 flex min-w-0 items-end gap-1 overflow-hidden text-white drop-shadow-md">
               <span className="shrink-0 text-[clamp(1.2rem,1.5vw,1.8rem)] font-black leading-none tracking-[-0.05em]">Rs.</span>
-              <span className="min-w-0 truncate text-[clamp(1.7rem,2.4vw,2.8rem)] font-black leading-none tracking-[-0.06em]">
+              <span className="min-w-0 truncate text-[clamp(1.7rem,2.2vw,2.9rem)] font-black leading-none tracking-[-0.06em]">
                 {revenueValue}
               </span>
             </div>
           </div>
 
-          <div className="advanced-card min-w-0 overflow-hidden p-5 md:p-6">
+          <div className="advanced-card min-w-0 overflow-hidden p-5 lg:col-span-1 md:p-6">
             <h2 className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-[#c084fc]/70">Items Sold</h2>
             <div className="overflow-hidden text-[clamp(1.8rem,2.3vw,2.8rem)] font-black leading-none text-[#f3e8ff] drop-shadow-[0_0_12px_rgba(255,255,255,0.3)]">
               {dashboard.total_today?.items_sold || 0}
             </div>
           </div>
 
-          <div className="advanced-card min-w-0 overflow-hidden p-5 md:p-6">
+          <div className="advanced-card min-w-0 overflow-hidden p-5 lg:col-span-1 md:p-6">
             <h2 className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-[#c084fc]/70">Est. Profit</h2>
             <div className="mt-3 flex min-w-0 items-end gap-1 overflow-hidden text-[#4ade80] drop-shadow-[0_0_12px_rgba(74,222,128,0.4)]">
               <span className="shrink-0 text-[clamp(1.1rem,1.4vw,1.6rem)] font-black leading-none tracking-[-0.05em]">Rs.</span>
@@ -157,14 +157,14 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div className="advanced-card min-w-0 overflow-hidden p-5 md:p-6">
+          <div className="advanced-card min-w-0 overflow-hidden p-5 lg:col-span-1 md:p-6">
             <h2 className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-[#c084fc]/70">Low Stock SKU</h2>
             <div className="overflow-hidden text-[clamp(1.8rem,2.2vw,2.6rem)] font-black leading-none text-[#fbbf24]">
               {dashboard.stock_summary?.low_stock_count || 0}
             </div>
           </div>
 
-          <div className="advanced-card min-w-0 overflow-hidden p-5 md:p-6">
+          <div className="advanced-card min-w-0 overflow-hidden p-5 lg:col-span-1 md:p-6">
             <h2 className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-[#c084fc]/70">Inventory Value</h2>
             <div className="mt-3 flex min-w-0 items-end gap-1 overflow-hidden text-[#60a5fa]">
               <span className="shrink-0 text-[clamp(1.1rem,1.4vw,1.6rem)] font-black leading-none tracking-[-0.05em]">Rs.</span>

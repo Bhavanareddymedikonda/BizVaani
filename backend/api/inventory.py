@@ -1,4 +1,6 @@
 """Inventory routes backed by real product and stock transaction data."""
+from datetime import date
+
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -115,6 +117,8 @@ async def create_inventory_product(
 async def get_inventory_transactions(
     product_id: int | None = Query(default=None),
     transaction_type: str | None = Query(default=None),
+    start_date: date | None = Query(default=None),
+    end_date: date | None = Query(default=None),
     limit: int = Query(default=50, ge=1, le=200),
     current_user: TokenData = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -124,6 +128,8 @@ async def get_inventory_transactions(
         shop_id=current_user.shop_id,
         product_id=product_id,
         transaction_type=transaction_type,
+        start_date=start_date,
+        end_date=end_date,
         limit=limit,
     )
 

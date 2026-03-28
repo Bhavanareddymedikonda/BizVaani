@@ -122,7 +122,7 @@ export default function InventoryPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0d1024] pb-24 font-sans text-white selection:bg-[#00d4ff] selection:text-black md:pb-0 md:pl-64">
+    <div className="min-h-screen bg-[#0d1024] pb-24 font-sans text-white selection:bg-[#00d4ff] selection:text-black md:pb-0">
       <header className="sticky top-0 z-30 border-b border-white/8 bg-[#0d1024]/80 px-4 py-6 backdrop-blur-md md:px-8">
         <h1 className="text-2xl font-black uppercase tracking-wide text-white">
           Inventory <span className="text-[#00d4ff]">Ledger</span>

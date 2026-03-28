@@ -3,17 +3,24 @@
 import React, { useState } from 'react';
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Bell, TrendingUp, Package, FileText, Settings, Menu, X } from "lucide-react";
+import { Home, Bell, TrendingUp, Package, FileText, Settings, Menu, X, History, type LucideIcon } from "lucide-react";
+
+type NavItem = {
+  name: string;
+  path: string;
+  icon: LucideIcon;
+};
 
 export default function AppNavigation() {
   const pathname = usePathname();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  const navItems = [
+  const navItems: NavItem[] = [
     { name: "Home", path: "/dashboard", icon: Home },
     { name: "Alerts", path: "/alerts", icon: Bell },
     { name: "Forecast", path: "/forecast", icon: TrendingUp },
     { name: "Stock", path: "/inventory", icon: Package },
+    { name: "History", path: "/transactions", icon: History },
     { name: "Invoice", path: "/invoice", icon: FileText },
   ];
 
@@ -118,7 +125,7 @@ export default function AppNavigation() {
 }
 
 // Mobile Item specific to Bottom Nav
-function MobileNavItem({ item, isActive, Icon }: { item: any; isActive: boolean; Icon: any }) {
+function MobileNavItem({ item, isActive, Icon }: { item: NavItem; isActive: boolean; Icon: LucideIcon }) {
   return (
     <Link
       href={item.path}
@@ -142,7 +149,7 @@ function MobileNavItem({ item, isActive, Icon }: { item: any; isActive: boolean;
 }
 
 // Desktop Item specific to Drawer
-function DesktopNavItem({ item, isActive, Icon, onClick }: { item: any; isActive: boolean; Icon: any; onClick: () => void }) {
+function DesktopNavItem({ item, isActive, Icon, onClick }: { item: NavItem; isActive: boolean; Icon: LucideIcon; onClick: () => void }) {
   return (
     <Link
       href={item.path}

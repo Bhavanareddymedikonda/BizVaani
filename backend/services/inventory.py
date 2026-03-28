@@ -263,6 +263,8 @@ async def list_stock_transactions(
     shop_id: int,
     product_id: int | None = None,
     transaction_type: str | None = None,
+    start_date: date | None = None,
+    end_date: date | None = None,
     limit: int = 50,
 ) -> list[dict]:
     stmt = (
@@ -277,6 +279,10 @@ async def list_stock_transactions(
         stmt = stmt.where(StockTransaction.product_id == product_id)
     if transaction_type:
         stmt = stmt.where(StockTransaction.transaction_type == transaction_type)
+    if start_date is not None:
+        stmt = stmt.where(func.date(StockTransaction.created_at) >= start_date.isoformat())
+    if end_date is not None:
+        stmt = stmt.where(func.date(StockTransaction.created_at) <= end_date.isoformat())
 
     result = await db.execute(stmt)
     rows = result.all()

@@ -196,11 +196,15 @@ export async function createProduct(data: {
 export async function getInventoryTransactions(params?: {
   product_id?: number;
   transaction_type?: string;
+  start_date?: string;
+  end_date?: string;
   limit?: number;
 }) {
   const query = new URLSearchParams();
   if (params?.product_id) query.set("product_id", String(params.product_id));
   if (params?.transaction_type) query.set("transaction_type", params.transaction_type);
+  if (params?.start_date) query.set("start_date", params.start_date);
+  if (params?.end_date) query.set("end_date", params.end_date);
   if (params?.limit) query.set("limit", String(params.limit));
   const suffix = query.toString() ? `?${query.toString()}` : "";
   return request<StockTransaction[]>(`/api/inventory/transactions${suffix}`);
