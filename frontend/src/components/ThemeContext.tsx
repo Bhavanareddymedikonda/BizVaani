@@ -35,7 +35,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const isLandingPage = pathname === "/";
   const [theme, setTheme] = useState<Theme>(getInitialTheme);
   const [accent, setAccent] = useState<Accent>(getInitialAccent);
-  const mounted = true;
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     const enforcedTheme: Theme = isLandingPage ? theme : "dark";
