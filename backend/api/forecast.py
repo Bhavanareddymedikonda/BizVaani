@@ -1,24 +1,68 @@
-"""Forecast route."""
-from fastapi import APIRouter
+"""Forecast route — production implementation.
+
+GET /api/forecast/{product_id} → 7-day + anomaly detection
+Ref: BACKEND_STRUCTURE.md Section 4 (GET /api/forecast/:product_id)
+"""
+from datetime import date
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import select, and_
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from db.database import get_db
+from db.models import Product, MLForecast
+from core.auth_utils import get_current_user, TokenData
 
 router = APIRouter()
 
 
 @router.get("/forecast/{product_id}")
-async def get_forecast(product_id: int):
-    # TODO: Query ml_forecasts table for this product
+async def get_forecast(
+    product_id: int,
+    current_user: TokenData = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    shop_id = current_user.shop_id
+    today = date.today()
+
+    # Verify product belongs to this shop
+    product_result = await db.execute(
+        select(Product).where(and_(Product.id == product_id, Product.shop_id == shop_id))
+    )
+    product = product_result.scalar_one_or_none()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    # Fetch 7-day forecasts
+    forecast_result = await db.execute(
+        select(MLForecast)
+        .where(and_(
+            MLForecast.shop_id == shop_id,
+            MLForecast.product_id == product_id,
+            MLForecast.forecast_date >= today,
+        ))
+        .order_by(MLForecast.forecast_date)
+        .limit(7)
+    )
+    forecasts = forecast_result.scalars().all()
+
+    forecast_7d = [
+        {
+            "date": f.forecast_date.isoformat(),
+            "predicted_qty": round(f.predicted_qty, 1),
+            "lower_bound": round(f.lower_bound, 1) if f.lower_bound else None,
+            "upper_bound": round(f.upper_bound, 1) if f.upper_bound else None,
+        }
+        for f in forecasts
+    ]
+
+    # Anomaly: check if any forecast has is_anomaly = True
+    any_anomaly = any(f.is_anomaly for f in forecasts)
+    anomaly_pct = forecasts[0].anomaly_pct if forecasts and forecasts[0].anomaly_pct else 0
+
     return {
-        "product_name": "Rice",
-        "forecast_7d": [
-            {"date": "2026-03-28", "predicted_qty": 28, "lower_bound": 22, "upper_bound": 34},
-            {"date": "2026-03-29", "predicted_qty": 31, "lower_bound": 25, "upper_bound": 37},
-            {"date": "2026-03-30", "predicted_qty": 26, "lower_bound": 20, "upper_bound": 32},
-            {"date": "2026-03-31", "predicted_qty": 33, "lower_bound": 27, "upper_bound": 39},
-            {"date": "2026-04-01", "predicted_qty": 29, "lower_bound": 23, "upper_bound": 35},
-            {"date": "2026-04-02", "predicted_qty": 35, "lower_bound": 29, "upper_bound": 41},
-            {"date": "2026-04-03", "predicted_qty": 30, "lower_bound": 24, "upper_bound": 36},
-        ],
-        "forecast_30d": [],
-        "is_anomaly": False,
-        "anomaly_pct": -5.2,
+        "product_name": product.name,
+        "forecast_7d": forecast_7d,
+        "forecast_30d": [],  # Simplified for hackathon: only 7-day
+        "is_anomaly": any_anomaly,
+        "anomaly_pct": round(anomaly_pct, 1),
     }

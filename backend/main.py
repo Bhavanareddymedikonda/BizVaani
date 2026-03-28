@@ -1,12 +1,15 @@
 """
 BizVaani Backend — FastAPI Application Entry Point
+
+Run: uvicorn main:app --reload --port 8000
 """
 import os
 from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from db.database import init_db
 from api import auth, dashboard, sales, forecast, market, invoice, simulate, voice, settings
@@ -21,13 +24,19 @@ async def lifespan(app: FastAPI):
     await init_db()
     print("[BizVaani] Database initialized")
 
-    # TODO: Start APScheduler here (scheduler/jobs.py)
-    # from scheduler.jobs import start_scheduler
-    # start_scheduler()
+    # Start background scheduler
+    try:
+        from scheduler.jobs import start_scheduler
+        scheduler = start_scheduler()
+    except Exception as e:
+        print(f"[BizVaani] Scheduler failed to start: {e}")
+        scheduler = None
 
     yield
 
-    # Shutdown: cleanup
+    # Shutdown
+    if scheduler:
+        scheduler.shutdown(wait=False)
     print("[BizVaani] Shutting down")
 
 
@@ -37,6 +46,21 @@ app = FastAPI(
     version="0.1.0",
     lifespan=lifespan,
 )
+
+
+# Global exception handler — consistent error format
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    return JSONResponse(
+        status_code=500,
+        content={
+            "error": {
+                "code": "INTERNAL_ERROR",
+                "message": "An unexpected error occurred",
+            }
+        },
+    )
+
 
 # CORS
 cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",")
@@ -70,3 +94,8 @@ app.include_router(dashboard_ws_router)
 @app.get("/")
 async def root():
     return {"status": "ok", "service": "BizVaani API", "version": "0.1.0"}
+
+
+@app.get("/health")
+async def health():
+    return {"status": "healthy"}

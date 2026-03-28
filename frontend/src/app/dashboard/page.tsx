@@ -3,6 +3,11 @@ import ProductCard from "../../components/ProductCard";
 import AlertCard from "../../components/AlertCard";
 import BottomNav from "../../components/BottomNav";
 
+// ============================================================
+// Dashboard Page — Task: Member C
+// See: APP_FLOW.md (Flow 2, 3), FRONTEND_GUIDELINES.md (Section 4)
+// ============================================================
+
 export default async function DashboardPage() {
   const dashboard: any = await getDashboard();
   

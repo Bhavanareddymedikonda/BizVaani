@@ -1,8 +1,26 @@
-"""Auth routes: register + login."""
-from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+"""Auth routes: register + login.
+
+- POST /api/auth/register → creates user + shop + seeds benchmark data
+- POST /api/auth/login    → verifies credentials, returns JWT
+
+Ref: BACKEND_STRUCTURE.md Section 4 (first two endpoints)
+"""
+import re
+from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel, field_validator
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from db.database import get_db
+from db.models import User, Shop, Product
+from db.seed import seed_benchmark_products
+from core.auth_utils import hash_password, verify_password, create_access_token
 
 router = APIRouter()
+
+VALID_CATEGORIES = {"grains", "dairy", "fmcg", "vegetables", "spices", "beverages", "general"}
+VALID_LANGUAGES = {"en", "hi", "te"}
+PHONE_REGEX = re.compile(r"^[6-9]\d{9}$")
 
 
 class RegisterRequest(BaseModel):
@@ -15,27 +33,120 @@ class RegisterRequest(BaseModel):
     shop_name: str
     categories: list[str] = []
 
+    @field_validator("phone")
+    @classmethod
+    def validate_phone(cls, v: str) -> str:
+        if not PHONE_REGEX.match(v):
+            raise ValueError("Must be 10 digits starting with 6-9")
+        return v
+
+    @field_validator("password")
+    @classmethod
+    def validate_password(cls, v: str) -> str:
+        if len(v) < 6:
+            raise ValueError("Password must be at least 6 characters")
+        return v
+
+    @field_validator("language")
+    @classmethod
+    def validate_language(cls, v: str) -> str:
+        if v not in VALID_LANGUAGES:
+            raise ValueError(f"Language must be one of {VALID_LANGUAGES}")
+        return v
+
+    @field_validator("categories")
+    @classmethod
+    def validate_categories(cls, v: list[str]) -> list[str]:
+        for cat in v:
+            if cat not in VALID_CATEGORIES:
+                raise ValueError(f"Invalid category: {cat}. Must be one of {VALID_CATEGORIES}")
+        return v
+
 
 class LoginRequest(BaseModel):
     phone: str
     password: str
 
 
-@router.post("/register")
-async def register(req: RegisterRequest):
-    # TODO: Hash password, create user + shop, generate JWT
+@router.post("/register", status_code=status.HTTP_201_CREATED)
+async def register(req: RegisterRequest, db: AsyncSession = Depends(get_db)):
+    # Check phone uniqueness
+    existing = await db.execute(select(User).where(User.phone == req.phone))
+    if existing.scalar_one_or_none():
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"error": {"code": "CONFLICT", "message": "Phone number already registered"}},
+        )
+
+    # Create user
+    user = User(
+        phone=req.phone,
+        name=req.name,
+        password_hash=hash_password(req.password),
+        city=req.city,
+        state=req.state,
+        language=req.language,
+    )
+    db.add(user)
+    await db.flush()
+
+    # Create shop
+    shop = Shop(
+        user_id=user.id,
+        shop_name=req.shop_name,
+        categories=req.categories,
+        district=req.city,  # Use city as district for hackathon
+        cold_start_path="benchmark",
+    )
+    db.add(shop)
+    await db.flush()
+
+    # Seed benchmark products for each category
+    products = seed_benchmark_products(shop.id, req.categories)
+    for p in products:
+        db.add(Product(**p))
+
+    user.is_onboarded = True
+    await db.commit()
+    await db.refresh(user)
+    await db.refresh(shop)
+
+    # Generate JWT
+    token = create_access_token(user.id, user.phone, shop.id, user.language)
+
     return {
-        "access_token": "mock-jwt-token",
-        "user": {"id": 1, "name": req.name, "city": req.city},
-        "shop": {"id": 1, "shop_name": req.shop_name},
+        "access_token": token,
+        "user": {"id": user.id, "name": user.name, "city": user.city},
+        "shop": {"id": shop.id, "shop_name": shop.shop_name},
     }
 
 
 @router.post("/login")
-async def login(req: LoginRequest):
-    # TODO: Verify credentials, return JWT
+async def login(req: LoginRequest, db: AsyncSession = Depends(get_db)):
+    # Find user by phone
+    result = await db.execute(select(User).where(User.phone == req.phone))
+    user = result.scalar_one_or_none()
+
+    if not user or not verify_password(req.password, user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail={"error": {"code": "UNAUTHORIZED", "message": "Invalid phone or password"}},
+        )
+
+    # Find associated shop
+    result = await db.execute(select(Shop).where(Shop.user_id == user.id))
+    shop = result.scalar_one_or_none()
+
+    if not shop:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"error": {"code": "NOT_FOUND", "message": "No shop found for this user"}},
+        )
+
+    token = create_access_token(user.id, user.phone, shop.id, user.language)
+
     return {
-        "access_token": "mock-jwt-token",
-        "user": {"id": 1, "name": "Ramesh Kumar", "city": "Nagpur"},
-        "shop": {"id": 1, "shop_name": "Ramesh Kirana Store"},
+        "access_token": token,
+        "user": {"id": user.id, "name": user.name, "city": user.city},
+        "shop": {"id": shop.id, "shop_name": shop.shop_name},
     }
