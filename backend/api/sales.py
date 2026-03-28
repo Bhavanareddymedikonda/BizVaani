@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from db.database import get_db
 from db.models import SalesEntry, Shop
 from core.auth_utils import get_current_user, TokenData
+from services.inventory import upsert_sales_entry_and_adjust_stock
 
 router = APIRouter()
 
@@ -60,30 +61,15 @@ async def log_sales_entry(
 
     for item in req.entries:
         entry_date = date.fromisoformat(item.entry_date)
-
-        # Upsert: update if exists for same shop+product+date
-        existing = await db.execute(
-            select(SalesEntry).where(
-                SalesEntry.shop_id == shop_id,
-                SalesEntry.product_id == item.product_id,
-                SalesEntry.entry_date == entry_date,
-            )
+        await upsert_sales_entry_and_adjust_stock(
+            db,
+            shop_id=shop_id,
+            product_id=item.product_id,
+            entry_date=entry_date,
+            quantity_sold=item.quantity_sold,
+            revenue=item.revenue,
+            source=req.source,
         )
-        row = existing.scalar_one_or_none()
-
-        if row:
-            row.quantity_sold = item.quantity_sold
-            row.revenue = item.revenue
-            row.entry_source = req.source
-        else:
-            db.add(SalesEntry(
-                shop_id=shop_id,
-                product_id=item.product_id,
-                entry_date=entry_date,
-                quantity_sold=item.quantity_sold,
-                revenue=item.revenue,
-                entry_source=req.source,
-            ))
         saved += 1
 
     # Increment data maturity

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useVoiceStore, type ChatMessage } from "@/store/useVoiceStore";
 import { useShopStore } from "@/store/useShopStore";
@@ -95,8 +96,23 @@ function DotLoader() {
   );
 }
 
-function ChatBubble({ msg }: { msg: ChatMessage }) {
+function formatActionLine(value: unknown) {
+  if (typeof value === "number") return value.toLocaleString("en-IN");
+  if (typeof value === "string") return value;
+  return "";
+}
+
+function ChatBubble({
+  msg,
+  onQuickAction,
+}: {
+  msg: ChatMessage;
+  onQuickAction: (text: string) => void;
+}) {
   const isUser = msg.role === "user";
+  const actionPayload = msg.action?.payload as Record<string, unknown> | undefined;
+  const inventoryList = (msg.action?.inventory ?? []) as Array<Record<string, unknown>>;
+  const transactionList = (msg.action?.transactions ?? []) as Array<Record<string, unknown>>;
 
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"} mb-4`}>
@@ -210,6 +226,158 @@ function ChatBubble({ msg }: { msg: ChatMessage }) {
           </div>
         )}
 
+        {!isUser && msg.action && (
+          <div className="mt-2 grid gap-2">
+            {msg.action.summary && (
+              <div
+                className="px-3 py-3"
+                style={{
+                  borderRadius: "18px",
+                  background: "rgba(255,255,255,0.045)",
+                  border: "1px solid rgba(255,255,255,0.08)",
+                }}
+              >
+                <p className="mb-1 text-[10px] font-black uppercase tracking-[0.28em]" style={{ color: "#a4b5d4" }}>
+                  Action
+                </p>
+                <p className="text-xs leading-6" style={{ color: "#f0f4ff" }}>
+                  {msg.action.summary}
+                </p>
+              </div>
+            )}
+
+            {actionPayload && Object.keys(actionPayload).length > 0 && (
+              <div
+                className="grid gap-1 px-3 py-3 text-xs"
+                style={{
+                  borderRadius: "18px",
+                  background: "rgba(0,212,255,0.05)",
+                  border: "1px solid rgba(0,212,255,0.14)",
+                  color: "rgba(228,236,255,0.92)",
+                }}
+              >
+                {Object.entries(actionPayload)
+                  .filter(([key]) => !["items", "inventory", "transactions"].includes(key))
+                  .slice(0, 6)
+                  .map(([key, value]) => (
+                    <div key={key} className="flex items-center justify-between gap-3">
+                      <span className="uppercase tracking-[0.2em]" style={{ color: "#7ae7ff" }}>
+                        {key.replace(/_/g, " ")}
+                      </span>
+                      <span className="text-right">{formatActionLine(value)}</span>
+                    </div>
+                  ))}
+              </div>
+            )}
+
+            {Array.isArray(actionPayload?.items) && actionPayload.items.length > 0 && (
+              <div
+                className="grid gap-2 px-3 py-3"
+                style={{
+                  borderRadius: "18px",
+                  background: "rgba(124,58,237,0.08)",
+                  border: "1px solid rgba(124,58,237,0.18)",
+                }}
+              >
+                {(actionPayload.items as Array<Record<string, unknown>>).map((item, index) => (
+                  <div key={`${msg.id}-item-${index}`} className="flex items-center justify-between gap-3 text-xs">
+                    <div>
+                      <p style={{ color: "#f0f4ff" }}>{formatActionLine(item.product)}</p>
+                      <p style={{ color: "rgba(164,181,212,0.82)" }}>
+                        {formatActionLine(item.qty)} x Rs.{formatActionLine(item.unit_price)}
+                      </p>
+                    </div>
+                    <p className="font-bold text-white">Rs.{formatActionLine(item.amount)}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {inventoryList.length > 0 && (
+              <div
+                className="grid gap-2 px-3 py-3"
+                style={{
+                  borderRadius: "18px",
+                  background: "rgba(255,255,255,0.045)",
+                  border: "1px solid rgba(255,255,255,0.08)",
+                }}
+              >
+                {inventoryList.slice(0, 5).map((item, index) => (
+                  <div key={`${msg.id}-inventory-${index}`} className="flex items-center justify-between text-xs">
+                    <span style={{ color: "#f0f4ff" }}>{formatActionLine(item.name)}</span>
+                    <span style={{ color: "#a4b5d4" }}>
+                      {formatActionLine(item.in_stock)} {formatActionLine(item.unit)} / {formatActionLine(item.status)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {transactionList.length > 0 && (
+              <div
+                className="grid gap-2 px-3 py-3"
+                style={{
+                  borderRadius: "18px",
+                  background: "rgba(255,255,255,0.045)",
+                  border: "1px solid rgba(255,255,255,0.08)",
+                }}
+              >
+                {transactionList.slice(0, 5).map((item, index) => (
+                  <div key={`${msg.id}-tx-${index}`} className="flex items-center justify-between text-xs gap-3">
+                    <span style={{ color: "#f0f4ff" }}>{formatActionLine(item.product_name)}</span>
+                    <span style={{ color: "#a4b5d4" }}>
+                      {formatActionLine(item.transaction_type)} {formatActionLine(item.quantity_delta)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {msg.action.requires_confirmation && (
+              <div className="flex gap-2">
+                <button
+                  onClick={() => onQuickAction("confirm")}
+                  className="px-4 py-2 text-xs font-semibold text-white"
+                  style={{
+                    borderRadius: "999px",
+                    background: "linear-gradient(135deg, rgba(0,212,255,0.96), rgba(109,40,217,0.96))",
+                  }}
+                >
+                  Confirm
+                </button>
+                <button
+                  onClick={() => onQuickAction("cancel")}
+                  className="px-4 py-2 text-xs font-semibold"
+                  style={{
+                    borderRadius: "999px",
+                    background: "rgba(255,255,255,0.06)",
+                    color: "#d7e2ff",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
+
+            {msg.action.status === "committed" && typeof actionPayload?.invoice_id === "number" && (
+              <div className="flex gap-2">
+                <Link
+                  href={`/invoice/${String(actionPayload.invoice_id)}`}
+                  className="px-4 py-2 text-xs font-semibold text-white"
+                  style={{
+                    borderRadius: "999px",
+                    background: "rgba(0,212,255,0.14)",
+                    border: "1px solid rgba(0,212,255,0.18)",
+                  }}
+                >
+                  Open Invoice
+                </Link>
+              </div>
+            )}
+          </div>
+        )}
+
         <p
           className="mt-1 px-1 text-[10px]"
           style={{ color: "rgba(164,181,212,0.76)", textAlign: isUser ? "right" : "left" }}
@@ -240,9 +408,9 @@ export default function VoiceModal({ open, onClose }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const suggestions = [
-    "Which product needs my attention today?",
-    "Why are my sales dropping this week?",
-    "Give me a stock plan for the next 7 days.",
+    "Show my low stock items.",
+    "Restock 20 rice bags.",
+    "Create invoice for Ramesh with 2 rice at 50 and 1 sugar at 40.",
   ];
 
   useEffect(() => {
@@ -268,6 +436,11 @@ export default function VoiceModal({ open, onClose }: Props) {
     setInputText("");
     await sendTextQuery(text);
   }, [inputText, isProcessing, resolvedShopId, sendTextQuery]);
+
+  const handleQuickAction = useCallback((text: string) => {
+    if (!resolvedShopId || isProcessing) return;
+    void sendTextQuery(text);
+  }, [resolvedShopId, isProcessing, sendTextQuery]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -434,7 +607,7 @@ export default function VoiceModal({ open, onClose }: Props) {
           )}
 
           {messages.map((msg) => (
-            <ChatBubble key={msg.id} msg={msg} />
+            <ChatBubble key={msg.id} msg={msg} onQuickAction={handleQuickAction} />
           ))}
 
           {error && (
