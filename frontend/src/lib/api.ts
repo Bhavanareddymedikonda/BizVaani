@@ -25,7 +25,16 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     ...options,
     headers: { ...authHeaders(), ...options?.headers },
   });
-  if (!res.ok) throw new Error(`API error: ${res.status} ${res.statusText}`);
+  if (!res.ok) {
+    let errorData;
+    try {
+      errorData = await res.json();
+    } catch {
+      errorData = res.statusText;
+    }
+    console.error("API Error Response Data:", errorData);
+    throw new Error(errorData.detail?.[0]?.msg || errorData.error?.message || `API error: ${res.status} ${res.statusText}`);
+  }
   return res.json();
 }
 
@@ -71,6 +80,16 @@ export async function login(data: LoginRequest): Promise<AuthResponse> {
 
 export async function getDashboard() {
   return request("/api/dashboard");
+}
+
+// --- Inventory ---
+
+export async function getInventory() {
+  if (USE_MOCKS) {
+    await new Promise((r) => setTimeout(r, 400));
+    return MOCK_INVENTORY;
+  }
+  return request("/api/inventory");
 }
 
 // --- Forecast ---

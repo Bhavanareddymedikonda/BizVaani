@@ -141,18 +141,28 @@ export default function OnboardPage() {
 
   const handleFinish = async (dataPath: string) => {
     try {
-      const res = await register({
-        ...form,
-        categories: form.categories,
-      });
+      // Use mock data if user left fields empty for quick testing
+      const payload = {
+        name: form.name || "Test User",
+        phone: form.phone || "9876543210",
+        password: form.password || "password123",
+        shop_name: form.shop_name || "Test Shop",
+        city: form.city || "Mumbai",
+        state: form.state || "MH",
+        language: form.language,
+        categories: form.categories.length ? form.categories : ["fmcg", "grains"],
+      };
+
+      const res = await register(payload);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       localStorage.setItem("bv_token", (res as any).access_token);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       localStorage.setItem("bv_user", JSON.stringify((res as any).user));
       console.log("Data path selected:", dataPath);
       router.push("/dashboard");
-    } catch (err) {
+    } catch (err: any) {
       console.error("Registration failed:", err);
+      alert(err.message || "Registration failed. Please check your inputs.");
     }
   };
 
