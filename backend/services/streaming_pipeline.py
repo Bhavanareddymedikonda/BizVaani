@@ -38,12 +38,12 @@ _SENTENCE_RE = re.compile(r"(?<=[।.!?])\s+|(?<=\n)")
 
 
 def _lang_code(lang: str) -> str:
-    return _LANG_CODE_MAP.get(lang, "hi-IN")
+    return _LANG_CODE_MAP.get(lang, "en-IN")
 
 
 async def stream_response_with_tts(
     messages: list[dict],
-    language: str = "hi",
+    language: str = "en",
 ) -> AsyncGenerator[tuple[str, bytes | None], None]:
     """Stream Groq tokens and yield (sentence, tts_audio_or_None) pairs.
 

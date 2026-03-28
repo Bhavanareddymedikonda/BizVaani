@@ -38,21 +38,17 @@ function resolveShopId(storedShopId: number | null): number | null {
 function MicButton({
   listening,
   disabled,
-  onPointerDown,
-  onPointerUp,
+  onClick,
 }: {
   listening: boolean;
   disabled: boolean;
-  onPointerDown: () => void;
-  onPointerUp: () => void;
+  onClick: () => void;
 }) {
   return (
     <button
-      onPointerDown={onPointerDown}
-      onPointerUp={onPointerUp}
-      onPointerLeave={onPointerUp}
+      onClick={onClick}
       disabled={disabled}
-      aria-label={listening ? "Release to send" : "Hold to speak"}
+      aria-label={listening ? "Stop recording" : "Start recording"}
       className="relative flex items-center justify-center shrink-0 transition-all duration-200 disabled:cursor-not-allowed"
       style={{
         width: 52,
@@ -244,9 +240,9 @@ export default function VoiceModal({ open, onClose }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const suggestions = [
-    "Aaj kis product par dhyan doon?",
-    "Mere sales dip ka reason batao",
-    "Is week ka stock plan suggest karo",
+    "Which product needs my attention today?",
+    "Why are my sales dropping this week?",
+    "Give me a stock plan for the next 7 days.",
   ];
 
   useEffect(() => {
@@ -280,14 +276,14 @@ export default function VoiceModal({ open, onClose }: Props) {
     }
   }, [handleSendText]);
 
-  const handleMicDown = useCallback(async () => {
+  const handleMicToggle = useCallback(async () => {
+    if (isListening) {
+      stopVoice();
+      return;
+    }
     if (!resolvedShopId) return;
     await startVoice();
-  }, [resolvedShopId, startVoice]);
-
-  const handleMicUp = useCallback(() => {
-    if (isListening) stopVoice();
-  }, [isListening, stopVoice]);
+  }, [isListening, resolvedShopId, startVoice, stopVoice]);
 
   if (!open) return null;
 
@@ -405,7 +401,7 @@ export default function VoiceModal({ open, onClose }: Props) {
                   Voice-first answers with market and shop context.
                 </h3>
                 <p className="text-sm leading-6" style={{ color: "rgba(164,181,212,0.86)" }}>
-                  Hold the mic or type a question. BizVaani will respond in the same focused style as the main product surface.
+                  Speak in English, Hindi, or Telugu, or type your question. BizVaani will answer in English by default with live business context.
                 </p>
               </div>
 
@@ -484,7 +480,7 @@ export default function VoiceModal({ open, onClose }: Props) {
                   animation: "voice-pulse 1.2s ease-in-out infinite",
                 }}
               />
-              Listening now. Release to send.
+              Recording now. Tap the mic again to send.
             </div>
           )}
 
@@ -500,8 +496,7 @@ export default function VoiceModal({ open, onClose }: Props) {
             <MicButton
               listening={isListening}
               disabled={!resolvedShopId || isProcessing}
-              onPointerDown={handleMicDown}
-              onPointerUp={handleMicUp}
+              onClick={() => void handleMicToggle()}
             />
 
             <input

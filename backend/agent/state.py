@@ -17,6 +17,7 @@ class ShopState(TypedDict):
     sales_data: Optional[dict]
     market_data: Optional[dict]
     forecast_data: Optional[dict]
+    web_context: Optional[list[dict]]
 
     # Output
     intent: Optional[str]
