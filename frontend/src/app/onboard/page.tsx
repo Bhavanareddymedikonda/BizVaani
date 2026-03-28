@@ -190,6 +190,8 @@ export default function OnboardPage() {
       localStorage.setItem("bv_token", (res as any).access_token);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       localStorage.setItem("bv_user", JSON.stringify((res as any).user));
+      localStorage.setItem("bv_shop", JSON.stringify((res as any).shop));
+
       console.log("Data path selected:", dataPath);
       setError("");
       router.push("/dashboard");
@@ -613,3 +615,5 @@ export default function OnboardPage() {
     </>
   );
 }
+
+

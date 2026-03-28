@@ -2,8 +2,8 @@
 
 Ref: BACKEND_STRUCTURE.md Section 9 (ML Model Details)
 
-Features: day_of_week, month, week_of_year, lag_1, lag_7, lag_30,
-          rolling_mean_7, rolling_mean_30, price_delta, category_benchmark
+Current features: day_of_week, month, week_of_year, lag_1, lag_7, lag_30,
+                  rolling_mean_7, rolling_mean_30
 """
 import os
 import pickle
@@ -12,7 +12,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.models import SalesEntry, Product, MLForecast
@@ -136,7 +136,7 @@ async def predict_7d(
 
     if not recent:
         # No data — return benchmark estimate
-        return _benchmark_forecast(product_id, today)
+        return _benchmark_forecast(today)
 
     # Build feature vectors for next 7 days
     qty_series = [float(r.quantity_sold) for r in recent]
@@ -180,7 +180,7 @@ async def predict_7d(
     return forecasts
 
 
-def _benchmark_forecast(product_id: int, today: date) -> list[dict]:
+def _benchmark_forecast(today: date) -> list[dict]:
     """Fallback forecast when no data exists."""
     import random
     base = 15
@@ -196,9 +196,26 @@ def _benchmark_forecast(product_id: int, today: date) -> list[dict]:
 
 
 async def retrain_for_shop(shop_id: int, db: AsyncSession):
-    """Retrain models for all products in a shop."""
+    """Retrain models only for active inventory products in a shop."""
+    sales_activity = (
+        select(
+            SalesEntry.product_id.label("product_id"),
+            func.count(SalesEntry.id).label("sales_count"),
+        )
+        .where(SalesEntry.shop_id == shop_id)
+        .group_by(SalesEntry.product_id)
+        .subquery()
+    )
+
     result = await db.execute(
-        select(Product).where(Product.shop_id == shop_id)
+        select(Product)
+        .outerjoin(sales_activity, sales_activity.c.product_id == Product.id)
+        .where(
+            and_(
+                Product.shop_id == shop_id,
+                (Product.stock_qty > 0) | (func.coalesce(sales_activity.c.sales_count, 0) > 0),
+            )
+        )
     )
     products = result.scalars().all()
 

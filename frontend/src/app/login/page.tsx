@@ -143,6 +143,8 @@ export default function LoginPage() {
       });
       localStorage.setItem("bv_token", data.access_token);
       localStorage.setItem("bv_user", JSON.stringify(data.user));
+      localStorage.setItem("bv_shop", JSON.stringify(data.shop));
+
       router.push("/dashboard");
     } catch (err) {
       setError((err as Error).message || "Login failed. Please try again.");
@@ -378,3 +380,5 @@ export default function LoginPage() {
     </>
   );
 }
+
+
