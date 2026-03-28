@@ -15,10 +15,10 @@ export interface Alert {
   id: number;
   product_name: string;
   level?: "HIGH" | "MEDIUM" | "LOW";
-  severity?: "HIGH" | "MEDIUM" | "LOW";
-  message?: string;
+  severity: "HIGH" | "MEDIUM" | "LOW";
+  message: string;
   reason?: string;
-  created_at?: string;
+  created_at: string;
 }
 
 export interface Shop {

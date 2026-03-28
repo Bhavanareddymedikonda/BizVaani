@@ -52,9 +52,7 @@ async def run_agent(
 
 
     if not db:
-        # No DB session — return fallback
-        from agent.nodes import _generate_fallback
-        return _generate_fallback(state)
+        raise ValueError("Database session is required for real connections.")
 
     # Node 1: Classify intent
     state = await classify_intent(state, db)

@@ -18,7 +18,7 @@ const WS_BASE =
  *   - chat_done → finalizes bubble with why/what/₹
  *   - Binary TTS audio chunks → Web Audio API immediate playback
  */
-export function useVoiceCapture(shopId: number) {
+export function useVoiceCapture(shopId: number | null) {
   const {
     setListening, setProcessing, setError, setSessionId,
     addUserMessage, addAssistantMessage, updateAssistantMessage,
@@ -33,9 +33,31 @@ export function useVoiceCapture(shopId: number) {
   const currentMsgId   = useRef<string | null>(null);
   const streamedText   = useRef<string>("");
 
+  /* ── Play raw audio buffer via Web Audio API ─────────────────── */
+  const playAudio = useCallback(async (buffer: ArrayBuffer) => {
+    try {
+      if (!audioCtxRef.current || audioCtxRef.current.state === "closed") {
+        audioCtxRef.current = new AudioContext();
+      }
+      const ctx = audioCtxRef.current;
+      const audioBuf = await ctx.decodeAudioData(buffer.slice(0));
+      const src = ctx.createBufferSource();
+      src.buffer = audioBuf;
+      src.connect(ctx.destination);
+      src.start();
+    } catch (err) {
+      console.warn("[Voice] Audio decode error:", err);
+    }
+  }, []);
+
   /* ── Initialize WebSocket once (keep-alive for session) ─────── */
   const ensureSocket = useCallback((): Promise<WebSocket> => {
     return new Promise((resolve, reject) => {
+      if (!shopId) {
+        reject(new Error("Missing shop session"));
+        return;
+      }
+
       if (wsRef.current?.readyState === WebSocket.OPEN) {
         resolve(wsRef.current);
         return;
@@ -55,7 +77,7 @@ export function useVoiceCapture(shopId: number) {
       ws.onmessage = async (event) => {
         /* Binary frame → TTS audio chunk */
         if (event.data instanceof ArrayBuffer) {
-          await _playAudio(event.data);
+          await playAudio(event.data);
           return;
         }
 
@@ -119,6 +141,14 @@ export function useVoiceCapture(shopId: number) {
               break;
 
             case "error":
+              if ((msg.text ?? "").toLowerCase().includes("invalid token")) {
+                localStorage.removeItem("bv_token");
+                localStorage.removeItem("bv_user");
+                localStorage.removeItem("bv_shop");
+                setError("Session expired. Please sign in again.");
+                ws.close();
+                break;
+              }
               setError(msg.text ?? "An error occurred");
               setProcessing(false);
               break;
@@ -136,24 +166,7 @@ export function useVoiceCapture(shopId: number) {
       };
     });
   }, [shopId, setSessionId, setProcessing, setError, setTranscript,
-      addUserMessage, addAssistantMessage, updateAssistantMessage]);
-
-  /* ── Play raw audio buffer via Web Audio API ─────────────────── */
-  async function _playAudio(buffer: ArrayBuffer) {
-    try {
-      if (!audioCtxRef.current || audioCtxRef.current.state === "closed") {
-        audioCtxRef.current = new AudioContext();
-      }
-      const ctx = audioCtxRef.current;
-      const audioBuf = await ctx.decodeAudioData(buffer.slice(0));
-      const src = ctx.createBufferSource();
-      src.buffer = audioBuf;
-      src.connect(ctx.destination);
-      src.start();
-    } catch (err) {
-      console.warn("[Voice] Audio decode error:", err);
-    }
-  }
+      addUserMessage, addAssistantMessage, updateAssistantMessage, playAudio]);
 
   /* ── Start mic recording ─────────────────────────────────────── */
   const startVoice = useCallback(async () => {
@@ -171,7 +184,7 @@ export function useVoiceCapture(shopId: number) {
     try {
       ws = await ensureSocket();
     } catch {
-      setError("Could not connect to BizVaani. Check your internet.");
+      setError(shopId ? "Could not connect to BizVaani. Check your internet." : "Shop session not ready yet. Please wait a moment.");
       stream.getTracks().forEach((t) => t.stop());
       return;
     }
@@ -191,7 +204,7 @@ export function useVoiceCapture(shopId: number) {
 
     recorder.start(250);  // 250ms chunks
     setListening(true);
-  }, [ensureSocket, setListening, setError]);
+  }, [ensureSocket, setListening, setError, shopId]);
 
   /* ── Stop recording → signal server ─────────────────────────── */
   const stopVoice = useCallback((language = "hi") => {
@@ -214,12 +227,12 @@ export function useVoiceCapture(shopId: number) {
     try {
       ws = await ensureSocket();
     } catch {
-      setError("Could not connect to BizVaani.");
+      setError(shopId ? "Could not connect to BizVaani." : "Shop session not ready yet. Please wait a moment.");
       return;
     }
     ws.send(JSON.stringify({ type: "text_query", text, language }));
     setProcessing(true);
-  }, [ensureSocket, setProcessing, setError]);
+  }, [ensureSocket, setProcessing, setError, shopId]);
 
   /* ── Clear session ───────────────────────────────────────────── */
   const clearSession = useCallback(() => {

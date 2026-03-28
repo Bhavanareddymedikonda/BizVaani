@@ -253,8 +253,7 @@ async def voice_websocket(
 async def _run_stt(audio_bytes: bytes, language: str = "hi") -> str | None:
     """Call Sarvam STT (saaras:v3). Returns transcript or None."""
     if not SARVAM_API_KEY:
-        # Dev fallback: return mock transcript so pipeline can be tested
-        return "Mera rice ka sales kyun gir raha hai?"
+        raise RuntimeError("SARVAM_API_KEY is not configured for real STT operation.")
 
     try:
         async with httpx.AsyncClient(timeout=20) as client:

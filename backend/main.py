@@ -5,16 +5,17 @@ Run: uvicorn main:app --reload --port 8000
 """
 import os
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+load_dotenv(Path(__file__).with_name(".env"))
+
 from db.database import init_db
 from api import auth, dashboard, sales, forecast, market, invoice, simulate, voice, settings
-
-load_dotenv()
 
 
 @asynccontextmanager

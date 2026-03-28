@@ -1,24 +1,8 @@
 // ============================================================
 // BizVaani — API Client Layer
-// Reads NEXT_PUBLIC_USE_MOCKS to toggle between mock and real.
-// Components import from here, NEVER from mockData directly.
+// Enforces purely real API requests to the database backend.
 // ============================================================
 
-import {
-  MOCK_REGISTER_RESPONSE,
-  MOCK_LOGIN_RESPONSE,
-  MOCK_DASHBOARD,
-  MOCK_FORECAST,
-  MOCK_FORECASTS_BY_PRODUCT,
-  MOCK_MARKET_PRICES,
-  MOCK_SIMULATE,
-  MOCK_INVOICE,
-  MOCK_VOICE_RESPONSE,
-  MOCK_CSV_PREVIEW,
-  MOCK_CSV_CONFIRM,
-} from "./mockData";
-
-const USE_MOCKS = process.env.NEXT_PUBLIC_USE_MOCKS === "true";
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 // --- Helpers ---
@@ -65,10 +49,6 @@ export interface AuthResponse {
 }
 
 export async function register(data: RegisterRequest): Promise<AuthResponse> {
-  if (USE_MOCKS) {
-    await new Promise((r) => setTimeout(r, 500));
-    return MOCK_REGISTER_RESPONSE as AuthResponse;
-  }
   return request<AuthResponse>("/api/auth/register", {
     method: "POST",
     body: JSON.stringify(data),
@@ -81,10 +61,6 @@ export interface LoginRequest {
 }
 
 export async function login(data: LoginRequest): Promise<AuthResponse> {
-  if (USE_MOCKS) {
-    await new Promise((r) => setTimeout(r, 300));
-    return MOCK_LOGIN_RESPONSE as AuthResponse;
-  }
   return request<AuthResponse>("/api/auth/login", {
     method: "POST",
     body: JSON.stringify(data),
@@ -94,42 +70,23 @@ export async function login(data: LoginRequest): Promise<AuthResponse> {
 // --- Dashboard ---
 
 export async function getDashboard() {
-  if (USE_MOCKS) {
-    await new Promise((r) => setTimeout(r, 400));
-    return MOCK_DASHBOARD;
-  }
   return request("/api/dashboard");
 }
 
 // --- Forecast ---
 
-// Takes product_id (integer) — backend route is /api/forecast/{product_id}
 export async function getForecast(productId: number | string) {
-  if (USE_MOCKS) {
-    await new Promise((r) => setTimeout(r, 300));
-    // Mock lookup by id or name for dev convenience
-    const key = String(productId);
-    return MOCK_FORECASTS_BY_PRODUCT[key] ?? MOCK_FORECAST;
-  }
   return request(`/api/forecast/${productId}`);
 }
 
 // --- Alerts ---
 export async function getAlerts() {
-  if (USE_MOCKS) {
-    await new Promise((r) => setTimeout(r, 200));
-    return (MOCK_DASHBOARD as { alerts?: unknown[] }).alerts ?? [];
-  }
   return request("/api/alerts");
 }
 
 // --- Market Prices ---
 
 export async function getMarketPrices() {
-  if (USE_MOCKS) {
-    await new Promise((r) => setTimeout(r, 200));
-    return MOCK_MARKET_PRICES;
-  }
   return request("/api/market/prices");
 }
 
@@ -145,10 +102,6 @@ export interface SimulateRequest {
 }
 
 export async function simulate(data: SimulateRequest) {
-  if (USE_MOCKS) {
-    await new Promise((r) => setTimeout(r, 600));
-    return MOCK_SIMULATE;
-  }
   return request("/api/simulate", {
     method: "POST",
     body: JSON.stringify(data),
@@ -171,10 +124,6 @@ export interface GenerateInvoiceRequest {
 }
 
 export async function generateInvoice(data: GenerateInvoiceRequest) {
-  if (USE_MOCKS) {
-    await new Promise((r) => setTimeout(r, 800));
-    return MOCK_INVOICE;
-  }
   return request("/api/invoice/generate", {
     method: "POST",
     body: JSON.stringify(data),
@@ -184,10 +133,6 @@ export async function generateInvoice(data: GenerateInvoiceRequest) {
 // --- Voice (REST fallback — primary path is WebSocket) ---
 
 export async function voiceQuery(shopId: number, transcript: string, language = "en") {
-  if (USE_MOCKS) {
-    await new Promise((r) => setTimeout(r, 1200));
-    return MOCK_VOICE_RESPONSE;
-  }
   return request("/api/voice/query", {
     method: "POST",
     body: JSON.stringify({ shop_id: shopId, transcript, language }),
@@ -206,10 +151,6 @@ export async function downloadInvoicePdf(invoiceId: number): Promise<Blob> {
 // --- CSV Upload ---
 
 export async function uploadCSV(file: File) {
-  if (USE_MOCKS) {
-    await new Promise((r) => setTimeout(r, 1000));
-    return MOCK_CSV_PREVIEW;
-  }
   const formData = new FormData();
   formData.append("file", file);
   const res = await fetch(`${API_URL}/api/settings/csv`, {
@@ -221,10 +162,6 @@ export async function uploadCSV(file: File) {
 }
 
 export async function confirmCSVImport(fileId: string, columnMapping: Record<string, string>) {
-  if (USE_MOCKS) {
-    await new Promise((r) => setTimeout(r, 800));
-    return MOCK_CSV_CONFIRM;
-  }
   return request("/api/settings/csv/confirm", {
     method: "POST",
     body: JSON.stringify({ file_id: fileId, column_mapping: columnMapping }),

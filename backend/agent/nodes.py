@@ -168,9 +168,9 @@ async def generate_response(state: ShopState, db: AsyncSession) -> ShopState:
 
         except Exception as e:
             print(f"[Agent] Groq error: {e}")
+            raise RuntimeError(f"Failed to generate response: {e}")
 
-    # Fallback: generate rule-based response
-    return _generate_fallback(state)
+    raise RuntimeError("GROQ_API_KEY is missing. Real LLM connection is required.")
 
 
 
@@ -199,17 +199,4 @@ def _parse_response(state: ShopState, content: str) -> ShopState:
     return state
 
 
-def _generate_fallback(state: ShopState) -> ShopState:
-    """Rule-based fallback when Groq is unavailable."""
-    sales = state.get("sales_data", {})
-    market = state.get("market_data", {})
 
-    products_7d = sales.get("products_7d", []) if sales else []
-    top_product = products_7d[0] if products_7d else {"name": "Rice", "qty": 30, "revenue": 1350}
-
-    state["why_text"] = f"Based on your sales data, {top_product['name']} is your top product with ₹{top_product.get('revenue', 0):.0f} revenue this week."
-    state["what_text"] = f"Consider promoting {top_product['name']} with a combo offer to increase basket size."
-    state["rupees_impact"] = round(top_product.get("revenue", 0) * 0.15, 0)
-    state["response_text"] = f"{state['why_text']} {state['what_text']}"
-    state["alert_triggered"] = False
-    return state
