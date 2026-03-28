@@ -205,7 +205,12 @@ Rules:
 - Handle compact quantity forms like 100kg, 2pcs, 5ltr.
 - If a product likely matches the catalog, use that product_id.
 - If unit_price is not stated but product exists in catalog, use the catalog selling price.
-- If required information is missing, set needs_clarification true and list missing_fields.
+- Customer name is optional. If missing, set customer_name to "Walk-in Customer".
+- Date is optional. Never ask for invoice date.
+- The minimum required information is at least one invoice item with product and quantity.
+- If price is missing but the product exists in catalog, use the catalog selling price automatically.
+- Only set needs_clarification true when no usable line item can be extracted.
+- Do not ask follow-up questions for customer details, invoice date, or other non-essential metadata.
 """
 
     user_prompt = json.dumps(
@@ -334,9 +339,9 @@ async def _parse_invoice_request(query: str, shop_id: int, db: AsyncSession) -> 
                 llm_payload["customer_name"] = llm_payload.get("customer_name") or "Walk-in Customer"
                 return await _build_invoice_reply_from_payload(llm_payload, shop_id, db)
             return _reply(
-                text="I need one more detail before I can draft this invoice.",
+                text="I could not extract a usable invoice item from that request.",
                 why=", ".join(missing_fields) or "",
-                what=str(llm_payload.get("clarification_question") or "Tell me the missing customer or item details."),
+                what=str(llm_payload.get("clarification_question") or "Tell me the item name, quantity, and price if it is not already in your catalog."),
                 action={"kind": "invoice_draft", "status": "needs_input", "requires_confirmation": False},
             )
         return await _build_invoice_reply_from_payload(llm_payload, shop_id, db)
@@ -348,7 +353,7 @@ async def _parse_invoice_request(query: str, shop_id: int, db: AsyncSession) -> 
     )
     if not customer_match:
         return _reply(
-            text="I can generate invoices from chat, but I need at least the items in one line.",
+            text="I can generate the invoice as soon as you give the item quantity and price.",
             what="Try: create invoice with 2 rice at 50 and 1 sugar at 40",
             action={"kind": "invoice_draft", "status": "needs_input", "requires_confirmation": False},
         )
