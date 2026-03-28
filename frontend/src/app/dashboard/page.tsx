@@ -1,99 +1,96 @@
-"use client";
+import { getDashboard } from "../../lib/api";
+import ProductCard from "../../components/ProductCard";
+import AlertCard from "../../components/AlertCard";
+import BottomNav from "../../components/BottomNav";
 
-// ============================================================
-// Dashboard Page — Task: Member C
-// See: APP_FLOW.md (Flow 2, 3), FRONTEND_GUIDELINES.md (Section 4)
-// ============================================================
-
-import { useEffect } from "react";
-import { getDashboard } from "@/lib/api";
-import { useShopStore } from "@/store/useShopStore";
-import ProductCard from "@/components/ProductCard";
-import AlertCard from "@/components/AlertCard";
-import BottomNav from "@/components/BottomNav";
-import MicFAB from "@/components/MicFAB";
-
-export default function DashboardPage() {
-  const { shop, products, alerts, totalToday, isLoading, setDashboardData, setLoading } = useShopStore();
-
-  useEffect(() => {
-    async function load() {
-      setLoading(true);
-      try {
-        const data = await getDashboard();
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        setDashboardData(data as any);
-      } catch (err) {
-        console.error("Failed to load dashboard:", err);
-      }
-    }
-    load();
-  }, [setDashboardData, setLoading]);
-
-  if (isLoading) {
-    return (
-      <main className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-pulse space-y-3 w-64">
-          <div className="h-5 bg-gray-200 rounded w-3/4" />
-          <div className="h-4 bg-gray-200 rounded w-1/2" />
-          <div className="h-10 bg-gray-200 rounded" />
-        </div>
-      </main>
-    );
-  }
+export default async function DashboardPage() {
+  const dashboard: any = await getDashboard();
+  
+  const highOrMediumAlerts = dashboard.alerts?.filter(
+    (a: any) => a.severity === "HIGH" || a.severity === "MEDIUM"
+  ) || [];
 
   return (
-    <main className="min-h-screen bg-gray-50 pb-24">
+    <div className="min-h-screen selection:bg-[#c084fc] selection:text-white font-sans pb-24 md:pb-0 pt-20 md:pt-6">
       {/* Header */}
-      <header className="bg-white px-4 py-4 border-b border-gray-200">
-        <p className="text-sm text-gray-500">Good morning</p>
-        <h1 className="text-xl font-bold text-gray-900">{shop?.shop_name || "My Shop"}</h1>
+      <header className="px-4 md:px-12 py-6 mb-4 flex flex-col md:flex-row md:items-center justify-between md:ml-20">
+        <div>
+          <h1 className="text-3xl font-black tracking-wide text-white">
+            Good morning, <span className="text-[#c084fc]">Ramesh</span>
+          </h1>
+          <p className="font-bold text-xs uppercase tracking-widest text-[#c084fc]/60 mt-1">
+            {dashboard.shop.shop_name} • {dashboard.shop.city}
+          </p>
+        </div>
       </header>
 
-      <div className="px-4 py-4 max-w-lg mx-auto space-y-6">
+      <main className="px-4 md:px-12 max-w-7xl mx-auto md:ml-20">
         {/* Stats Row */}
-        {totalToday && (
-          <div className="grid grid-cols-3 gap-3">
-            <div className="bg-white rounded-xl p-3 text-center shadow-sm border border-gray-100">
-              <p className="text-2xl font-bold text-gray-900">₹{totalToday.revenue.toLocaleString()}</p>
-              <p className="text-xs text-gray-500 mt-1">Revenue</p>
-            </div>
-            <div className="bg-white rounded-xl p-3 text-center shadow-sm border border-gray-100">
-              <p className="text-2xl font-bold text-gray-900">{totalToday.items_sold}</p>
-              <p className="text-xs text-gray-500 mt-1">Items Sold</p>
-            </div>
-            <div className="bg-white rounded-xl p-3 text-center shadow-sm border border-gray-100">
-              <p className="text-2xl font-bold text-green-600">₹{totalToday.profit_estimate.toLocaleString()}</p>
-              <p className="text-xs text-gray-500 mt-1">Est. Profit</p>
+        <section className="mb-10 grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
+          <div className="advanced-card !bg-gradient-to-br !from-[#9333ea] !to-[#4c1d95] text-white p-6 col-span-2 md:col-span-1 shadow-[0_8px_32px_rgba(147,51,234,0.4)] !border-none flex flex-col justify-center">
+            <h2 className="text-xs font-bold uppercase tracking-wider mb-1 opacity-90 text-[#e9d5ff]">Total Revenue Today</h2>
+            <div className="text-5xl md:text-6xl font-black mt-2 drop-shadow-md tracking-tighter">
+              ₹{dashboard.total_today.revenue.toLocaleString()}
             </div>
           </div>
-        )}
+          
+          <div className="advanced-card p-6 flex flex-col justify-center">
+            <h2 className="text-xs font-bold uppercase tracking-wider mb-2 text-[#c084fc]/70">Items Sold</h2>
+            <div className="text-4xl font-black text-[#f3e8ff] drop-shadow-[0_0_12px_rgba(255,255,255,0.3)]">{dashboard.total_today.items_sold}</div>
+          </div>
+          
+          <div className="advanced-card p-6 flex flex-col justify-center">
+            <h2 className="text-xs font-bold uppercase tracking-wider mb-2 text-[#c084fc]/70">Est. Profit</h2>
+            <div className="text-4xl font-black text-[#4ade80] drop-shadow-[0_0_12px_rgba(74,222,128,0.4)]">₹{dashboard.total_today.profit_estimate.toLocaleString()}</div>
+          </div>
+        </section>
 
-        {/* Alerts */}
-        {alerts.length > 0 && (
-          <section>
-            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">Alerts</h2>
-            <div className="space-y-2">
-              {alerts.map((alert) => (
-                <AlertCard key={alert.id} alert={alert} />
+        {/* Alerts Section */}
+        {highOrMediumAlerts.length > 0 && (
+          <section className="mb-10">
+            <div className="flex items-center gap-3 mb-6 bg-red-500/10 text-red-500 px-4 py-2.5 rounded-full w-max border border-red-500/20 backdrop-blur-md">
+              <div className="w-3 h-3 rounded-full bg-red-500 shadow-[0_0_12px_rgba(239,68,68,0.8)] animate-pulse" />
+              <h2 className="text-xs font-black uppercase tracking-widest">
+                Action Required
+              </h2>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
+              {highOrMediumAlerts.map((alert: any) => (
+                <AlertCard
+                  key={alert.id}
+                  productName={alert.product_name}
+                  severity={alert.severity}
+                  message={alert.message}
+                />
               ))}
             </div>
           </section>
         )}
 
-        {/* Products */}
-        <section>
-          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">Top Products</h2>
-          <div className="space-y-3">
-            {products.map((product) => (
-              <ProductCard key={product.id} product={product} />
+        {/* Product Cards Section */}
+        <section className="mb-10">
+          <div className="mb-6 flex justify-between items-end">
+            <h2 className="text-sm font-black uppercase tracking-widest text-[#c084fc]/80 bg-[#c084fc]/10 px-4 py-2 rounded-xl backdrop-blur-sm border border-[#c084fc]/20">
+              Top Products
+            </h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
+            {dashboard.top_products.map((product: any) => (
+              <ProductCard
+                key={product.id}
+                name={product.name}
+                todayQty={product.today_qty}
+                todayRevenue={product.today_revenue}
+                trendPct={product.trend_pct}
+                mandiPrice={product.mandi_price}
+                riskLevel={product.risk_level}
+              />
             ))}
           </div>
         </section>
-      </div>
+      </main>
 
-      <MicFAB />
-      <BottomNav active="dashboard" />
-    </main>
+      <BottomNav />
+    </div>
   );
 }

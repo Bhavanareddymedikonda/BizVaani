@@ -8,6 +8,7 @@ import {
   MOCK_REGISTER_RESPONSE,
   MOCK_LOGIN_RESPONSE,
   MOCK_DASHBOARD,
+  MOCK_INVENTORY,
   MOCK_FORECAST,
   MOCK_FORECASTS_BY_PRODUCT,
   MOCK_MARKET_PRICES,
@@ -93,6 +94,16 @@ export async function getDashboard() {
     return MOCK_DASHBOARD;
   }
   return request("/api/dashboard");
+}
+
+// --- Inventory ---
+
+export async function getInventory() {
+  if (USE_MOCKS) {
+    await new Promise((r) => setTimeout(r, 400));
+    return MOCK_INVENTORY;
+  }
+  return request("/api/inventory");
 }
 
 // --- Forecast ---

@@ -36,17 +36,19 @@ export default function ForecastPage() {
   }, [selected]);
 
   return (
-    <main className="min-h-screen bg-gray-50 pb-24">
-      <header className="bg-white px-4 py-4 border-b border-gray-200">
-        <h1 className="text-xl font-bold text-gray-900">Demand Forecast</h1>
+    <div className="min-h-screen selection:bg-[#f97316] selection:text-white font-sans md:pl-64 pb-24 md:pb-0">
+      <header className="px-4 md:px-8 py-6 sticky top-0 z-30 bg-[#fff8eb]/80 backdrop-blur-md border-b-2 border-dashed border-[#e5dacc]">
+        <h1 className="text-2xl font-black tracking-wide text-[#4a2d12] uppercase">
+          Demand <span className="text-[#f97316]">Forecast</span>
+        </h1>
       </header>
 
-      <div className="px-4 py-4 max-w-lg mx-auto space-y-4">
+      <main className="px-4 md:px-8 max-w-7xl mx-auto py-6 space-y-6">
         {/* Product Selector */}
         <select
           value={selected}
           onChange={(e) => setSelected(e.target.value)}
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg text-base bg-white"
+          className="w-full max-w-md px-5 py-3 rounded-2xl bg-white/70 border-none shadow-[inset_2px_2px_5px_rgba(0,0,0,0.05),inset_-2px_-2px_5px_rgba(255,255,255,0.8)] text-[#4a2d12] font-bold text-lg focus:outline-none focus:ring-2 focus:ring-[#f97316]/40 appearance-none"
         >
           {PRODUCTS.map((p) => (
             <option key={p} value={p}>{p}</option>
@@ -55,24 +57,28 @@ export default function ForecastPage() {
 
         {/* Chart */}
         {loading ? (
-          <div className="h-64 bg-gray-200 rounded-xl animate-pulse" />
+          <div className="h-64 clay-card animate-pulse" />
         ) : forecast ? (
-          <>
-            <ForecastChart data={forecast.forecast_7d} productName={forecast.product_name} />
-            {forecast.is_anomaly && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
-                ⚠️ Anomaly detected: {forecast.anomaly_pct.toFixed(1)}% deviation from expected
-              </div>
-            )}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="space-y-6">
+              <ForecastChart data={forecast.forecast_7d} productName={forecast.product_name} />
+              {forecast.is_anomaly && (
+                <div className="bg-red-50/80 border border-red-200 rounded-2xl p-4 text-sm font-bold text-red-700 shadow-[inset_1px_1px_3px_rgba(255,255,255,0.8),1px_1px_3px_rgba(0,0,0,0.05)]">
+                  ⚠️ Anomaly detected: {forecast.anomaly_pct.toFixed(1)}% deviation from expected
+                </div>
+              )}
+            </div>
 
             {/* Profit Simulator */}
-            <ImpactCard />
-          </>
+            <div>
+              <ImpactCard />
+            </div>
+          </div>
         ) : null}
-      </div>
+      </main>
 
       <MicFAB />
-      <BottomNav active="forecast" />
-    </main>
+      <BottomNav />
+    </div>
   );
 }

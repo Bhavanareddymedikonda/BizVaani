@@ -1,26 +1,53 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  .advanced-card {
+    @apply rounded-[24px] bg-[#231A3F]/50 backdrop-blur-xl border border-white/5 shadow-[0_8px_32px_rgba(0,0,0,0.5)] transition-all duration-300 relative overflow-hidden;
+  }
+  
+  .advanced-card::before {
+    content: '';
+    @apply absolute inset-0 bg-gradient-to-br from-[#c084fc]/10 to-transparent opacity-0 transition-opacity duration-300 pointer-events-none;
+  }
+  
+  .advanced-card:hover::before {
+    @apply opacity-100;
+  }
+  
+  .advanced-card-hover {
+    @apply hover:shadow-[0_16px_48px_rgba(192,132,252,0.15)] hover:-translate-y-1 hover:border-[#c084fc]/30;
+  }
+
+  .advanced-btn {
+    @apply rounded-xl bg-gradient-to-r from-[#9333ea] to-[#4c1d95] text-white shadow-[0_4px_16px_rgba(147,51,234,0.3)] hover:shadow-[0_8px_24px_rgba(147,51,234,0.5)] active:scale-95 transition-all duration-300 font-bold uppercase tracking-wider relative overflow-hidden border border-[#c084fc]/30;
+  }
+
+  .advanced-btn::after {
+    content: '';
+    @apply absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full transition-transform duration-700 ease-in-out pointer-events-none;
+  }
+  
+  .advanced-btn:hover::after {
+    @apply translate-x-full;
+  }
+  
+  .advanced-btn-sm {
+    @apply rounded-lg bg-[#231A3F]/40 backdrop-blur-md text-[#c084fc] shadow-[0_4px_12px_rgba(0,0,0,0.3)] hover:bg-[#c084fc]/20 hover:border-[#c084fc]/50 active:scale-95 transition-all duration-200 border border-white/5 font-bold uppercase tracking-wider;
+  }
+  
+  .advanced-panel {
+    @apply bg-[#0D0914]/90 backdrop-blur-3xl shadow-[8px_0_32px_rgba(0,0,0,0.8)] border-white/10;
+  }
+}
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --background: #090614; /* Deep space purple/black */
+  --foreground: #f3e8ff; /* Soft violet white */
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
 }

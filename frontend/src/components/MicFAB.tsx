@@ -15,10 +15,10 @@ export default function MicFAB() {
     <>
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-20 left-1/2 -translate-x-1/2 w-16 h-16 rounded-full bg-orange-500 hover:bg-orange-600 shadow-lg flex items-center justify-center z-50 transition-all duration-200 active:scale-95"
+        className="fixed bottom-[88px] left-1/2 -translate-x-1/2 md:bottom-8 md:right-8 md:left-auto md:translate-x-0 w-[68px] h-[68px] !rounded-[24px] clay-btn flex items-center justify-center z-50 text-3xl pb-1"
         aria-label="Voice assistant"
       >
-        <span className="text-2xl">🎙️</span>
+        🎙️
       </button>
 
       {isOpen && <VoiceModal onClose={() => setIsOpen(false)} />}
