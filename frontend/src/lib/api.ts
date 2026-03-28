@@ -58,12 +58,18 @@ export interface RegisterRequest {
   categories: string[];
 }
 
-export async function register(data: RegisterRequest) {
+export interface AuthResponse {
+  access_token: string;
+  user: { id: number; name: string; city: string };
+  shop: { id: number; shop_name: string };
+}
+
+export async function register(data: RegisterRequest): Promise<AuthResponse> {
   if (USE_MOCKS) {
     await new Promise((r) => setTimeout(r, 500));
-    return MOCK_REGISTER_RESPONSE;
+    return MOCK_REGISTER_RESPONSE as AuthResponse;
   }
-  return request("/api/auth/register", {
+  return request<AuthResponse>("/api/auth/register", {
     method: "POST",
     body: JSON.stringify(data),
   });
@@ -74,12 +80,12 @@ export interface LoginRequest {
   password: string;
 }
 
-export async function login(data: LoginRequest) {
+export async function login(data: LoginRequest): Promise<AuthResponse> {
   if (USE_MOCKS) {
     await new Promise((r) => setTimeout(r, 300));
-    return MOCK_LOGIN_RESPONSE;
+    return MOCK_LOGIN_RESPONSE as AuthResponse;
   }
-  return request("/api/auth/login", {
+  return request<AuthResponse>("/api/auth/login", {
     method: "POST",
     body: JSON.stringify(data),
   });
