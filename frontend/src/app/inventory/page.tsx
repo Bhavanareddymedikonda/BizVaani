@@ -1,17 +1,27 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AlertTriangle, CheckCircle2, History, PackagePlus } from "lucide-react";
+import { AlertTriangle, CheckCircle2, History, PackagePlus, PlusSquare } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
 import InventoryCard from "@/components/InventoryCard";
 import MicFAB from "@/components/MicFAB";
 import {
   adjustInventory,
+  createProduct,
   getInventory,
   getInventoryTransactions,
   type InventoryItem,
   type StockTransaction,
 } from "@/lib/api";
+
+const EMPTY_PRODUCT = {
+  name: "",
+  category: "",
+  unit: "kg",
+  selling_price: "",
+  cost_price: "",
+  stock_qty: "",
+};
 
 export default function InventoryPage() {
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
@@ -20,9 +30,11 @@ export default function InventoryPage() {
   const [quantityDelta, setQuantityDelta] = useState("");
   const [adjustmentType, setAdjustmentType] = useState<"restock" | "manual_adjustment">("restock");
   const [notes, setNotes] = useState("");
+  const [newProduct, setNewProduct] = useState(EMPTY_PRODUCT);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
+  const [submittingAdjustment, setSubmittingAdjustment] = useState(false);
+  const [submittingProduct, setSubmittingProduct] = useState(false);
 
   async function loadData() {
     setLoading(true);
@@ -49,6 +61,12 @@ export default function InventoryPage() {
   const lowItems = inventory.filter((item) => item.status === "LOW_STOCK");
   const inStockItems = inventory.filter((item) => item.status === "IN_STOCK");
 
+  function triggerDashboardRefresh() {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("bv_dashboard_refresh", String(Date.now()));
+    }
+  }
+
   async function handleSubmitAdjustment() {
     if (!selected) return;
     const parsedDelta = Number(quantityDelta);
@@ -57,7 +75,7 @@ export default function InventoryPage() {
       return;
     }
 
-    setSubmitting(true);
+    setSubmittingAdjustment(true);
     try {
       await adjustInventory({
         product_id: selected.id,
@@ -68,11 +86,38 @@ export default function InventoryPage() {
       setQuantityDelta("");
       setNotes("");
       setSelected(null);
+      triggerDashboardRefresh();
       await loadData();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Stock update failed");
     } finally {
-      setSubmitting(false);
+      setSubmittingAdjustment(false);
+    }
+  }
+
+  async function handleCreateProduct() {
+    if (!newProduct.name || !newProduct.category || !newProduct.selling_price) {
+      setError("Name, category, and selling price are required.");
+      return;
+    }
+
+    setSubmittingProduct(true);
+    try {
+      await createProduct({
+        name: newProduct.name,
+        category: newProduct.category,
+        unit: newProduct.unit || "kg",
+        selling_price: Number(newProduct.selling_price),
+        cost_price: newProduct.cost_price ? Number(newProduct.cost_price) : undefined,
+        stock_qty: Number(newProduct.stock_qty || 0),
+      });
+      setNewProduct(EMPTY_PRODUCT);
+      triggerDashboardRefresh();
+      await loadData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Product creation failed");
+    } finally {
+      setSubmittingProduct(false);
     }
   }
 
@@ -83,7 +128,7 @@ export default function InventoryPage() {
           Inventory <span className="text-[#00d4ff]">Ledger</span>
         </h1>
         <p className="mt-1 text-xs font-bold uppercase tracking-[0.22em] text-[#8ea3d8]">
-          Live stock balances, transaction history, and fast updates
+          Live stock balances, transaction history, stock updates, and new products
         </p>
       </header>
 
@@ -184,11 +229,11 @@ export default function InventoryPage() {
 
                 <button
                   onClick={() => void handleSubmitAdjustment()}
-                  disabled={submitting}
+                  disabled={submittingAdjustment}
                   className="rounded-2xl px-4 py-3 text-sm font-bold text-white disabled:opacity-50"
                   style={{ background: "linear-gradient(135deg, rgba(0,212,255,0.95), rgba(109,40,217,0.95))" }}
                 >
-                  {submitting ? "Saving..." : "Save Inventory Update"}
+                  {submittingAdjustment ? "Saving..." : "Save Inventory Update"}
                 </button>
               </div>
             ) : (
@@ -196,6 +241,65 @@ export default function InventoryPage() {
                 Select any product card to post a restock or reduction. Every change writes a stock transaction and updates the current balance.
               </p>
             )}
+          </section>
+
+          <section className="rounded-[28px] border border-white/8 bg-white/5 p-5 backdrop-blur-md">
+            <div className="mb-4 flex items-center gap-2">
+              <PlusSquare size={18} className="text-[#00d4ff]" />
+              <h2 className="text-sm font-black uppercase tracking-[0.24em] text-[#cdd8ff]">Add New Product</h2>
+            </div>
+
+            <div className="grid gap-3">
+              <input
+                value={newProduct.name}
+                onChange={(event) => setNewProduct((current) => ({ ...current, name: event.target.value }))}
+                placeholder="Product name"
+                className="rounded-2xl border border-white/8 bg-[#111632] px-4 py-3 text-sm text-white outline-none placeholder:text-white/35"
+              />
+              <input
+                value={newProduct.category}
+                onChange={(event) => setNewProduct((current) => ({ ...current, category: event.target.value }))}
+                placeholder="Category"
+                className="rounded-2xl border border-white/8 bg-[#111632] px-4 py-3 text-sm text-white outline-none placeholder:text-white/35"
+              />
+              <div className="grid grid-cols-2 gap-3">
+                <input
+                  value={newProduct.unit}
+                  onChange={(event) => setNewProduct((current) => ({ ...current, unit: event.target.value }))}
+                  placeholder="Unit"
+                  className="rounded-2xl border border-white/8 bg-[#111632] px-4 py-3 text-sm text-white outline-none placeholder:text-white/35"
+                />
+                <input
+                  value={newProduct.stock_qty}
+                  onChange={(event) => setNewProduct((current) => ({ ...current, stock_qty: event.target.value }))}
+                  placeholder="Opening stock"
+                  className="rounded-2xl border border-white/8 bg-[#111632] px-4 py-3 text-sm text-white outline-none placeholder:text-white/35"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <input
+                  value={newProduct.selling_price}
+                  onChange={(event) => setNewProduct((current) => ({ ...current, selling_price: event.target.value }))}
+                  placeholder="Selling price"
+                  className="rounded-2xl border border-white/8 bg-[#111632] px-4 py-3 text-sm text-white outline-none placeholder:text-white/35"
+                />
+                <input
+                  value={newProduct.cost_price}
+                  onChange={(event) => setNewProduct((current) => ({ ...current, cost_price: event.target.value }))}
+                  placeholder="Cost price"
+                  className="rounded-2xl border border-white/8 bg-[#111632] px-4 py-3 text-sm text-white outline-none placeholder:text-white/35"
+                />
+              </div>
+
+              <button
+                onClick={() => void handleCreateProduct()}
+                disabled={submittingProduct}
+                className="rounded-2xl px-4 py-3 text-sm font-bold text-white disabled:opacity-50"
+                style={{ background: "linear-gradient(135deg, rgba(34,197,94,0.95), rgba(0,212,255,0.95))" }}
+              >
+                {submittingProduct ? "Creating..." : "Create Product"}
+              </button>
+            </div>
           </section>
 
           <section className="rounded-[28px] border border-white/8 bg-white/5 p-5 backdrop-blur-md">

@@ -9,8 +9,9 @@ from sqlalchemy import select, func, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.database import get_db
-from db.models import Shop, Product, SalesEntry, MarketPrice, MLForecast
+from db.models import Shop, Product, SalesEntry, MarketPrice, MLForecast, User
 from core.auth_utils import get_current_user, TokenData
+from services.inventory import stock_status
 
 router = APIRouter()
 
@@ -28,6 +29,9 @@ async def get_dashboard(
     shop = shop_result.scalar_one_or_none()
     if not shop:
         return {"error": "Shop not found"}
+
+    user_result = await db.execute(select(User).where(User.id == current_user.user_id))
+    user = user_result.scalar_one_or_none()
 
     # Fetch products
     products_result = await db.execute(
@@ -81,11 +85,17 @@ async def get_dashboard(
     total_revenue = 0.0
     total_items = 0.0
     total_profit = 0.0
+    low_stock_count = 0
+    inventory_value = 0.0
 
     for p in products:
         t = today_map.get(p.id, {"qty": 0, "rev": 0})
         wa_qty = week_ago_map.get(p.id, t["qty"] if t["qty"] else 1)
         trend_pct = round(((t["qty"] - wa_qty) / wa_qty) * 100, 1) if wa_qty else 0
+        avg_daily_qty = t["qty"] / 7 if t["qty"] else 0
+        minimum_required = max(avg_daily_qty * 3, 5)
+        stock_level = float(p.stock_qty or 0)
+        stock_state = stock_status(stock_level, minimum_required)
 
         # Risk level from forecast
         forecast = forecast_map.get(p.id)
@@ -105,6 +115,9 @@ async def get_dashboard(
             "name": p.name,
             "today_qty": int(t["qty"]),
             "today_revenue": round(t["rev"]),
+            "stock_qty": round(stock_level, 2),
+            "stock_status": stock_state,
+            "unit": p.unit,
             "trend_pct": trend_pct,
             "mandi_price": round(mandi_price, 1),
             "risk_level": risk_level,
@@ -112,8 +125,11 @@ async def get_dashboard(
 
         total_revenue += t["rev"]
         total_items += t["qty"]
+        inventory_value += stock_level * float(p.cost_price or p.selling_price or 0)
         if p.cost_price:
             total_profit += (p.selling_price - p.cost_price) * t["qty"]
+        if stock_state != "IN_STOCK":
+            low_stock_count += 1
 
     # Build alerts from HIGH risk products
     alerts = []
@@ -145,11 +161,20 @@ async def get_dashboard(
             "city": shop.district,
             "categories": shop.categories,
         },
+        "user": {
+            "id": user.id if user else current_user.user_id,
+            "name": user.name if user else "Owner",
+        },
         "top_products": top_products[:10],
         "alerts": alerts,
         "total_today": {
             "revenue": round(total_revenue),
             "items_sold": int(total_items),
             "profit_estimate": round(total_profit),
+        },
+        "stock_summary": {
+            "sku_count": len(products),
+            "low_stock_count": low_stock_count,
+            "inventory_value": round(inventory_value),
         },
     }

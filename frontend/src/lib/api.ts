@@ -153,6 +153,21 @@ export async function adjustInventory(data: {
   });
 }
 
+export async function createProduct(data: {
+  name: string;
+  category: string;
+  unit: string;
+  selling_price: number;
+  cost_price?: number;
+  stock_qty: number;
+}) {
+  return request("/api/inventory/products", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+}
+
 export async function getInventoryTransactions(params?: {
   product_id?: number;
   transaction_type?: string;

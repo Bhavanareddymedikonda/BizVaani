@@ -124,6 +124,9 @@ export function useVoiceCapture(shopId: number | null) {
                   rupeesImpact: msg.rupees_impact,
                   action: msg.action,
                 });
+                if (msg.action?.status === "committed" && typeof window !== "undefined") {
+                  localStorage.setItem("bv_dashboard_refresh", String(Date.now()));
+                }
                 currentMsgId.current = null;
                 streamedText.current = "";
               }
