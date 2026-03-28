@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { getDashboard } from "../../lib/api";
 import ProductCard from "../../components/ProductCard";
 import AlertCard from "../../components/AlertCard";
@@ -33,8 +34,18 @@ type DashboardData = {
 };
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+
+  function handleLogout() {
+    localStorage.removeItem("bv_token");
+    localStorage.removeItem("bv_user");
+    localStorage.removeItem("bv_shop");
+    localStorage.removeItem("bv_dashboard_refresh");
+    sessionStorage.removeItem("bv_voice_session");
+    router.replace("/login");
+  }
 
   useEffect(() => {
     async function loadDashboard() {
@@ -105,6 +116,12 @@ export default function DashboardPage() {
             {dashboard.shop?.shop_name || "Ramesh Kirana Store"} | {dashboard.shop?.city || "Nagpur"}
           </p>
         </div>
+        <button
+          onClick={handleLogout}
+          className="mt-4 inline-flex items-center rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-black uppercase tracking-[0.2em] text-white/80 transition-colors hover:border-red-400/30 hover:bg-red-500/10 hover:text-red-200 md:mt-0"
+        >
+          Logout
+        </button>
       </header>
 
       <main className="mx-auto max-w-7xl px-4 md:ml-20 md:px-12">
