@@ -1,27 +1,23 @@
-"""Invoice routes — production implementation with PDF generation.
-
-POST /api/invoice/generate → create invoice + generate PDF
-GET  /api/invoice/{id}/pdf  → download PDF
-
-Ref: BACKEND_STRUCTURE.md Section 4 (Invoice endpoints)
-"""
+"""Invoice routes with preview, confirmation, stock deduction, and PDF generation."""
 import io
-import os
 from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
-from sqlalchemy import select, func
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from core.auth_utils import TokenData, get_current_user
 from db.database import get_db
-from db.models import Invoice, Shop
-from core.auth_utils import get_current_user, TokenData
+from db.models import Invoice, Product, Shop
+from services.inventory import apply_stock_change, find_product_by_name
 
 router = APIRouter()
 
 
 class InvoiceItem(BaseModel):
+    product_id: int | None = None
     product: str
     qty: float
     unit_price: float
@@ -35,6 +31,86 @@ class GenerateInvoiceRequest(BaseModel):
     items: list[InvoiceItem]
 
 
+async def _generate_invoice_number(db: AsyncSession, shop_id: int) -> str:
+    year = datetime.now(timezone.utc).year
+
+    count_result = await db.execute(
+        select(func.count(Invoice.id)).where(Invoice.shop_id == shop_id)
+    )
+    sequence = (count_result.scalar() or 0) + 1
+
+    while True:
+        candidate = f"BV-{year}-S{shop_id:03d}-{sequence:03d}"
+        existing_result = await db.execute(
+            select(Invoice.id).where(Invoice.invoice_number == candidate)
+        )
+        if existing_result.scalar_one_or_none() is None:
+            return candidate
+        sequence += 1
+
+
+async def _build_invoice_payload(db: AsyncSession, shop_id: int, req: GenerateInvoiceRequest) -> dict:
+    shop_result = await db.execute(select(Shop).where(Shop.id == shop_id))
+    shop = shop_result.scalar_one_or_none()
+
+    subtotal = 0.0
+    items_data: list[dict] = []
+    for item in req.items:
+        matched_product = None
+        if item.product_id:
+            product_result = await db.execute(
+                select(Product).where(Product.id == item.product_id, Product.shop_id == shop_id)
+            )
+            matched_product = product_result.scalar_one_or_none()
+        if not matched_product:
+            matched_product = await find_product_by_name(db, shop_id, item.product)
+
+        amount = item.qty * item.unit_price
+        gst_amount = amount * (item.gst_rate / 100)
+        subtotal += amount
+        items_data.append(
+            {
+                "product_id": matched_product.id if matched_product else item.product_id,
+                "product": item.product,
+                "qty": item.qty,
+                "unit_price": item.unit_price,
+                "gst_rate": item.gst_rate,
+                "amount": round(amount, 2),
+                "gst_amount": round(gst_amount, 2),
+                "stock_available": float(matched_product.stock_qty or 0) if matched_product else None,
+            }
+        )
+
+    total_gst = sum(item["gst_amount"] for item in items_data)
+    cgst = round(total_gst / 2, 2)
+    sgst = round(total_gst / 2, 2)
+    total = round(subtotal + total_gst, 2)
+
+    return {
+        "shop": {
+            "id": shop.id if shop else shop_id,
+            "shop_name": shop.shop_name if shop else "BizVaani Store",
+            "gstin": shop.gstin if shop else None,
+        },
+        "customer_name": req.customer_name,
+        "customer_gstin": req.customer_gstin,
+        "items": items_data,
+        "subtotal": round(subtotal, 2),
+        "cgst": cgst,
+        "sgst": sgst,
+        "total": total,
+    }
+
+
+@router.post("/preview")
+async def preview_invoice(
+    req: GenerateInvoiceRequest,
+    current_user: TokenData = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    return await _build_invoice_payload(db, current_user.shop_id, req)
+
+
 @router.post("/generate", status_code=201)
 async def generate_invoice(
     req: GenerateInvoiceRequest,
@@ -42,61 +118,79 @@ async def generate_invoice(
     db: AsyncSession = Depends(get_db),
 ):
     shop_id = current_user.shop_id
+    payload = await _build_invoice_payload(db, shop_id, req)
+    invoice_number = await _generate_invoice_number(db, shop_id)
 
-    # Get shop for header info
-    shop_result = await db.execute(select(Shop).where(Shop.id == shop_id))
-    shop = shop_result.scalar_one_or_none()
-
-    # Calculate totals
-    subtotal = 0
-    items_data = []
-    for item in req.items:
-        amount = item.qty * item.unit_price
-        gst_amount = amount * (item.gst_rate / 100)
-        subtotal += amount
-        items_data.append({
-            "product": item.product,
-            "qty": item.qty,
-            "unit_price": item.unit_price,
-            "gst_rate": item.gst_rate,
-            "amount": round(amount, 2),
-            "gst_amount": round(gst_amount, 2),
-        })
-
-    total_gst = sum(i["gst_amount"] for i in items_data)
-    cgst = round(total_gst / 2, 2)
-    sgst = round(total_gst / 2, 2)
-    total = round(subtotal + total_gst, 2)
-
-    # Generate invoice number
-    count_result = await db.execute(
-        select(func.count(Invoice.id)).where(Invoice.shop_id == shop_id)
-    )
-    count = (count_result.scalar() or 0) + 1
-    year = datetime.now(timezone.utc).year
-    invoice_number = f"BV-{year}-{count:03d}"
-
-    # Save to DB
     invoice = Invoice(
         shop_id=shop_id,
         invoice_number=invoice_number,
         customer_name=req.customer_name,
         customer_gstin=req.customer_gstin,
-        items=items_data,
-        subtotal=round(subtotal, 2),
-        cgst=cgst,
-        sgst=sgst,
-        total=total,
+        items=payload["items"],
+        subtotal=payload["subtotal"],
+        cgst=payload["cgst"],
+        sgst=payload["sgst"],
+        total=payload["total"],
     )
     db.add(invoice)
+    await db.flush()
+
+    for item in payload["items"]:
+        product_id = item.get("product_id")
+        if not product_id:
+            continue
+        await apply_stock_change(
+            db,
+            shop_id=shop_id,
+            product_id=product_id,
+            quantity_delta=-float(item["qty"]),
+            transaction_type="invoice_sale",
+            unit_price=float(item["unit_price"]),
+            reference_type="invoice",
+            reference_id=invoice.id,
+            notes=f"Invoice {invoice_number} for {req.customer_name}",
+        )
+
     await db.commit()
     await db.refresh(invoice)
 
     return {
-        "invoice_id": invoice.invoice_number,
+        "invoice_id": invoice.id,
+        "invoice_number": invoice.invoice_number,
         "pdf_url": f"/api/invoice/{invoice.id}/pdf",
-        "total": total,
-        "gst_breakup": {"cgst": cgst, "sgst": sgst},
+        "detail_url": f"/api/invoice/{invoice.id}",
+        "total": payload["total"],
+        "gst_breakup": {"cgst": payload["cgst"], "sgst": payload["sgst"]},
+    }
+
+
+@router.get("/{invoice_id}")
+async def get_invoice_detail(
+    invoice_id: int,
+    db: AsyncSession = Depends(get_db),
+):
+    invoice_result = await db.execute(select(Invoice).where(Invoice.id == invoice_id))
+    invoice = invoice_result.scalar_one_or_none()
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+
+    shop_result = await db.execute(select(Shop).where(Shop.id == invoice.shop_id))
+    shop = shop_result.scalar_one_or_none()
+
+    return {
+        "id": invoice.id,
+        "invoice_number": invoice.invoice_number,
+        "date": invoice.created_at.date().isoformat() if invoice.created_at else None,
+        "customer_name": invoice.customer_name,
+        "customer_gstin": invoice.customer_gstin,
+        "shop_name": shop.shop_name if shop else "BizVaani Store",
+        "shop_gstin": shop.gstin if shop else None,
+        "items": invoice.items,
+        "subtotal": invoice.subtotal,
+        "cgst": invoice.cgst,
+        "sgst": invoice.sgst,
+        "total": invoice.total,
+        "pdf_url": f"/api/invoice/{invoice.id}/pdf",
     }
 
 
@@ -111,22 +205,18 @@ async def get_invoice_pdf(
     if not invoice:
         raise HTTPException(status_code=404, detail="Invoice not found")
 
-    # Get shop info
     shop_result = await db.execute(select(Shop).where(Shop.id == invoice.shop_id))
     shop = shop_result.scalar_one_or_none()
     shop_name = shop.shop_name if shop else "BizVaani Store"
 
-    # Generate PDF using ReportLab
     try:
         from reportlab.lib.pagesizes import A4
-        from reportlab.lib.units import mm
         from reportlab.pdfgen import canvas
 
         buffer = io.BytesIO()
         c = canvas.Canvas(buffer, pagesize=A4)
         w, h = A4
 
-        # Header
         c.setFont("Helvetica-Bold", 18)
         c.drawString(30, h - 40, shop_name)
         c.setFont("Helvetica", 10)
@@ -136,7 +226,6 @@ async def get_invoice_pdf(
 
         c.line(30, h - 65, w - 30, h - 65)
 
-        # Customer
         y = h - 85
         c.setFont("Helvetica", 10)
         c.drawString(30, y, f"Bill To: {invoice.customer_name}")
@@ -144,7 +233,6 @@ async def get_invoice_pdf(
             y -= 15
             c.drawString(30, y, f"GSTIN: {invoice.customer_gstin}")
 
-        # Table header
         y -= 30
         c.setFont("Helvetica-Bold", 10)
         c.drawString(30, y, "Item")
@@ -154,32 +242,30 @@ async def get_invoice_pdf(
         c.drawString(410, y, "Amount")
         c.line(30, y - 5, w - 30, y - 5)
 
-        # Table rows
         c.setFont("Helvetica", 10)
         items = invoice.items if isinstance(invoice.items, list) else []
         for item in items:
             y -= 18
             c.drawString(30, y, str(item.get("product", "")))
             c.drawString(200, y, str(item.get("qty", "")))
-            c.drawString(270, y, f"₹{item.get('unit_price', 0)}")
+            c.drawString(270, y, f"Rs.{item.get('unit_price', 0)}")
             c.drawString(340, y, f"{item.get('gst_rate', 5)}%")
-            c.drawString(410, y, f"₹{item.get('amount', 0)}")
+            c.drawString(410, y, f"Rs.{item.get('amount', 0)}")
 
-        # Totals
         y -= 25
         c.line(30, y + 10, w - 30, y + 10)
         c.drawRightString(400, y, "Subtotal:")
-        c.drawRightString(w - 30, y, f"₹{invoice.subtotal}")
+        c.drawRightString(w - 30, y, f"Rs.{invoice.subtotal}")
         y -= 15
         c.drawRightString(400, y, "CGST:")
-        c.drawRightString(w - 30, y, f"₹{invoice.cgst}")
+        c.drawRightString(w - 30, y, f"Rs.{invoice.cgst}")
         y -= 15
         c.drawRightString(400, y, "SGST:")
-        c.drawRightString(w - 30, y, f"₹{invoice.sgst}")
+        c.drawRightString(w - 30, y, f"Rs.{invoice.sgst}")
         y -= 20
         c.setFont("Helvetica-Bold", 12)
         c.drawRightString(400, y, "Total:")
-        c.drawRightString(w - 30, y, f"₹{invoice.total}")
+        c.drawRightString(w - 30, y, f"Rs.{invoice.total}")
 
         c.save()
         buffer.seek(0)
@@ -189,9 +275,7 @@ async def get_invoice_pdf(
             media_type="application/pdf",
             headers={"Content-Disposition": f'attachment; filename="{invoice.invoice_number}.pdf"'},
         )
-
     except ImportError:
-        # ReportLab not installed — return JSON fallback
         return {
             "invoice_number": invoice.invoice_number,
             "message": "PDF generation requires reportlab. Install with: pip install reportlab",

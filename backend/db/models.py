@@ -68,6 +68,27 @@ class Product(Base):
     )
 
 
+class StockTransaction(Base):
+    __tablename__ = "stock_transactions"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    shop_id = Column(Integer, ForeignKey("shops.id", ondelete="CASCADE"), nullable=False)
+    product_id = Column(Integer, ForeignKey("products.id", ondelete="CASCADE"), nullable=False)
+    transaction_type = Column(String(32), nullable=False)
+    quantity_delta = Column(Float, nullable=False)
+    balance_after = Column(Float, nullable=False)
+    unit_price = Column(Float, nullable=True)
+    reference_type = Column(String(32), nullable=True)
+    reference_id = Column(Integer, nullable=True)
+    notes = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=_utcnow)
+    updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow)
+
+    __table_args__ = (
+        Index("idx_stock_transactions_shop_product_date", "shop_id", "product_id", "created_at"),
+        Index("idx_stock_transactions_reference", "reference_type", "reference_id"),
+    )
+
+
 class SalesEntry(Base):
     __tablename__ = "sales_entries"
     id = Column(Integer, primary_key=True, autoincrement=True)

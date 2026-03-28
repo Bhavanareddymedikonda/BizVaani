@@ -20,6 +20,7 @@ export function useVoiceCapture(shopId: number | null) {
   const currentMsgId = useRef<string | null>(null);
   const streamedText = useRef<string>("");
   const pendingStopRef = useRef<{ language: string } | null>(null);
+  const recordedChunksRef = useRef<Blob[]>([]);
 
   const playAudio = useCallback(async (buffer: ArrayBuffer) => {
     try {
@@ -75,6 +76,15 @@ export function useVoiceCapture(shopId: number | null) {
             why?: string;
             what?: string;
             rupees_impact?: number;
+            action?: {
+              kind: string;
+              status: string;
+              requires_confirmation?: boolean;
+              summary?: string;
+              payload?: Record<string, unknown>;
+              inventory?: Array<Record<string, unknown>>;
+              transactions?: Array<Record<string, unknown>>;
+            };
           };
 
           switch (msg.type) {
@@ -93,7 +103,7 @@ export function useVoiceCapture(shopId: number | null) {
               setProcessing(true);
               currentMsgId.current = _genId();
               streamedText.current = "";
-              addAssistantMessage({ text: "", id: currentMsgId.current } as never);
+              addAssistantMessage({ text: "", id: currentMsgId.current });
               break;
 
             case "chat_token":
@@ -112,6 +122,7 @@ export function useVoiceCapture(shopId: number | null) {
                   why: msg.why,
                   what: msg.what,
                   rupeesImpact: msg.rupees_impact,
+                  action: msg.action,
                 });
                 currentMsgId.current = null;
                 streamedText.current = "";
@@ -182,25 +193,30 @@ export function useVoiceCapture(shopId: number | null) {
 
     const recorder = new MediaRecorder(stream, { mimeType });
     recorderRef.current = recorder;
+    recordedChunksRef.current = [];
 
     recorder.ondataavailable = (event) => {
-      if (event.data.size > 0 && ws.readyState === WebSocket.OPEN) {
-        ws.send(event.data);
+      if (event.data.size > 0) {
+        recordedChunksRef.current.push(event.data);
       }
     };
 
-    recorder.onstop = () => {
+    recorder.onstop = async () => {
       stream.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
 
       if (ws.readyState === WebSocket.OPEN) {
+        const inputBlob = new Blob(recordedChunksRef.current, { type: recorder.mimeType || mimeType });
+        const wavBuffer = await blobToWavArrayBuffer(inputBlob);
+        ws.send(wavBuffer);
         ws.send(JSON.stringify({
           type: "end_of_speech",
           language: pendingStopRef.current?.language ?? "en",
-          mime_type: recorder.mimeType || mimeType,
+          mime_type: "audio/wav",
         }));
       }
 
+      recordedChunksRef.current = [];
       pendingStopRef.current = null;
     };
 
@@ -256,4 +272,61 @@ export function useVoiceCapture(shopId: number | null) {
 
 function _genId() {
   return Math.random().toString(36).slice(2, 8);
+}
+
+async function blobToWavArrayBuffer(blob: Blob): Promise<ArrayBuffer> {
+  const sourceBuffer = await blob.arrayBuffer();
+  const audioContext = new AudioContext();
+  try {
+    const audioBuffer = await audioContext.decodeAudioData(sourceBuffer.slice(0));
+    return encodeWav(audioBuffer);
+  } finally {
+    await audioContext.close().catch(() => {});
+  }
+}
+
+function encodeWav(audioBuffer: AudioBuffer): ArrayBuffer {
+  const numberOfChannels = audioBuffer.numberOfChannels;
+  const sampleRate = audioBuffer.sampleRate;
+  const format = 1;
+  const bitDepth = 16;
+  const samples = audioBuffer.length;
+  const blockAlign = numberOfChannels * bitDepth / 8;
+  const byteRate = sampleRate * blockAlign;
+  const dataSize = samples * blockAlign;
+  const buffer = new ArrayBuffer(44 + dataSize);
+  const view = new DataView(buffer);
+
+  writeString(view, 0, "RIFF");
+  view.setUint32(4, 36 + dataSize, true);
+  writeString(view, 8, "WAVE");
+  writeString(view, 12, "fmt ");
+  view.setUint32(16, 16, true);
+  view.setUint16(20, format, true);
+  view.setUint16(22, numberOfChannels, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, byteRate, true);
+  view.setUint16(32, blockAlign, true);
+  view.setUint16(34, bitDepth, true);
+  writeString(view, 36, "data");
+  view.setUint32(40, dataSize, true);
+
+  const channels = Array.from({ length: numberOfChannels }, (_, index) => audioBuffer.getChannelData(index));
+  let offset = 44;
+
+  for (let i = 0; i < samples; i++) {
+    for (let channel = 0; channel < numberOfChannels; channel++) {
+      const sample = Math.max(-1, Math.min(1, channels[channel][i]));
+      view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7fff, true);
+      offset += 2;
+    }
+  }
+
+  return buffer;
+}
+
+function writeString(view: DataView, offset: number, value: string) {
+  for (let i = 0; i < value.length; i++) {
+    view.setUint8(offset + i, value.charCodeAt(i));
+  }
 }

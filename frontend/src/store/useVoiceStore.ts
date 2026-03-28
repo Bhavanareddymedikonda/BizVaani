@@ -1,69 +1,74 @@
 import { create } from "zustand";
 
+export interface ChatAction {
+  kind: string;
+  status: string;
+  requires_confirmation?: boolean;
+  summary?: string;
+  payload?: Record<string, unknown>;
+  inventory?: Array<Record<string, unknown>>;
+  transactions?: Array<Record<string, unknown>>;
+}
+
 export interface VoiceResponse {
   text: string;
   why?: string;
   what?: string;
   rupeesImpact?: number;
+  action?: ChatAction;
 }
 
 export interface ChatMessage {
-  id:        string;
-  role:      "user" | "assistant";
-  text:      string;
-  why?:      string;
-  what?:     string;
+  id: string;
+  role: "user" | "assistant";
+  text: string;
+  why?: string;
+  what?: string;
   rupeesImpact?: number;
+  action?: ChatAction;
   timestamp: number;
 }
 
 interface VoiceState {
-  /* Connection state */
-  isListening:  boolean;
+  isListening: boolean;
   isProcessing: boolean;
-  error:        string | null;
-
-  /* Current turn */
-  transcript:   string;
-  response:     VoiceResponse | null;
-
-  /* Persistent session history (all turns in this session) */
-  messages:     ChatMessage[];
-  sessionId:    string | null;
-
-  /* Actions */
-  setListening:   (v: boolean) => void;
-  setTranscript:  (text: string) => void;
-  setProcessing:  (v: boolean) => void;
-  setResponse:    (r: VoiceResponse | null) => void;
-  setError:       (e: string | null) => void;
-  setSessionId:   (id: string) => void;
-  addUserMessage: (text: string) => string;          // returns message id
-  addAssistantMessage: (msg: Omit<ChatMessage, "id" | "role" | "timestamp">) => void;
+  error: string | null;
+  transcript: string;
+  response: VoiceResponse | null;
+  messages: ChatMessage[];
+  sessionId: string | null;
+  setListening: (v: boolean) => void;
+  setTranscript: (text: string) => void;
+  setProcessing: (v: boolean) => void;
+  setResponse: (r: VoiceResponse | null) => void;
+  setError: (e: string | null) => void;
+  setSessionId: (id: string) => void;
+  addUserMessage: (text: string) => string;
+  addAssistantMessage: (msg: Omit<ChatMessage, "role" | "timestamp">) => void;
   updateAssistantMessage: (id: string, patch: Partial<ChatMessage>) => void;
-  clearSession:   () => void;
-  reset:          () => void;          // resets current turn, keeps history
+  clearSession: () => void;
+  reset: () => void;
 }
 
 function uid(): string {
   return Math.random().toString(36).slice(2, 10);
 }
 
-export const useVoiceStore = create<VoiceState>((set, get) => ({
-  isListening:  false,
+export const useVoiceStore = create<VoiceState>((set) => ({
+  isListening: false,
   isProcessing: false,
-  error:        null,
-  transcript:   "",
-  response:     null,
-  messages:     [],
-  sessionId:    null,
+  error: null,
+  transcript: "",
+  response: null,
+  messages: [],
+  sessionId: null,
 
-  setListening:  (v)    => set({ isListening: v }),
+  setListening: (v) => set({ isListening: v }),
   setTranscript: (text) => set({ transcript: text }),
-  setProcessing: (v)    => set({ isProcessing: v }),
-  setResponse:   (r)    => set({ response: r, isProcessing: false }),
-  setError:      (e)    => set({ error: e, isProcessing: false, isListening: false }),
-  setSessionId:  (id)   => set({ sessionId: id }),
+  setProcessing: (v) => set({ isProcessing: v }),
+  setResponse: (r) => set({ response: r, isProcessing: false }),
+  setError: (e) => set({ error: e, isProcessing: false, isListening: false }),
+  setSessionId: (id) => set({ sessionId: id }),
 
   addUserMessage: (text) => {
     const id = uid();
@@ -74,9 +79,20 @@ export const useVoiceStore = create<VoiceState>((set, get) => ({
   },
 
   addAssistantMessage: (msg) => {
-    const id = uid();
     set((s) => ({
-      messages: [...s.messages, { id, role: "assistant", timestamp: Date.now(), ...msg }],
+      messages: [
+        ...s.messages,
+        {
+          id: msg.id || uid(),
+          role: "assistant",
+          text: msg.text,
+          why: msg.why,
+          what: msg.what,
+          rupeesImpact: msg.rupeesImpact,
+          action: msg.action,
+          timestamp: Date.now(),
+        },
+      ],
       isProcessing: false,
     }));
   },
@@ -87,9 +103,6 @@ export const useVoiceStore = create<VoiceState>((set, get) => ({
     }));
   },
 
-  clearSession: () =>
-    set({ messages: [], sessionId: null, transcript: "", response: null, error: null }),
-
-  reset: () =>
-    set({ isListening: false, isProcessing: false, transcript: "", response: null, error: null }),
+  clearSession: () => set({ messages: [], sessionId: null, transcript: "", response: null, error: null }),
+  reset: () => set({ isListening: false, isProcessing: false, transcript: "", response: null, error: null }),
 }));

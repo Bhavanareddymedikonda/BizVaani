@@ -33,6 +33,7 @@ from core.auth_utils import decode_token
 
 from db.database import async_session
 from agent.graph import run_agent
+from services.operations import handle_operational_query
 
 router = APIRouter()
 
@@ -86,6 +87,7 @@ async def voice_websocket(
     audio_buffer = bytearray()
     language = "en"
     audio_mime_type = "audio/webm"
+    pending_action: dict | None = None
 
     # Announce session start
     await websocket.send_json({
@@ -95,7 +97,7 @@ async def voice_websocket(
 
     async def process_query(query: str, msg_id: str):
         """Run the full pipeline for one query turn."""
-        nonlocal conversation_history
+        nonlocal conversation_history, pending_action
 
         # Add to history
         conversation_history.append({"role": "user", "text": query})
@@ -104,20 +106,28 @@ async def voice_websocket(
         await websocket.send_json({"type": "thinking"})
 
         try:
-            # ── LangGraph agent (includes Tavily + market data) ──────────
             async with async_session() as db:
-                result = await run_agent(
+                result = await handle_operational_query(
+                    query,
                     shop_id=shop_id,
-                    transcript=query,
-                    language=language,
                     db=db,
-                    conversation_history=conversation_history,  # pass context
+                    pending_action=pending_action,
                 )
+                if not result:
+                    result = await run_agent(
+                        shop_id=shop_id,
+                        transcript=query,
+                        language=language,
+                        db=db,
+                        conversation_history=conversation_history,
+                    )
 
-            why_text      = result.get("why_text", "")
-            what_text     = result.get("what_text", "")
+            why_text = result.get("why_text", "")
+            what_text = result.get("what_text", "")
             rupees_impact = result.get("rupees_impact", 0)
             response_text = result.get("response_text", "") or f"{why_text} {what_text}".strip()
+            action = result.get("action")
+            pending_action = result.get("pending_action")
 
             # ── Stream response text token by token ──────────────────────
             # Simulate streaming by splitting into words
@@ -142,6 +152,7 @@ async def voice_websocket(
                 "why": why_text,
                 "what": what_text,
                 "rupees_impact": rupees_impact,
+                "action": action,
             })
 
             # Add assistant turn to history
@@ -234,6 +245,7 @@ async def voice_websocket(
                 elif msg_type == "clear_session":
                     # User wants to start fresh
                     conversation_history = []
+                    pending_action = None
                     session_id = str(uuid.uuid4())[:8]
                     await websocket.send_json({
                         "type": "session_start",
