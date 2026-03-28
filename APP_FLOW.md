@@ -6,8 +6,8 @@
 ## 1. Entry Points
 
 ### Primary Entry Points
-- **Direct URL / PWA**: User opens `bizvaani.vercel.app` → if not registered → Onboarding; if registered → Dashboard
-- **PWA Install Prompt**: "Add to Home Screen" on Android Chrome — app opens fullscreen with no browser bar
+- **Direct URL / Web App**: User opens `bizvaani.vercel.app` in desktop browser → if not registered → Onboarding; if registered → Dashboard
+- **Desktop Bookmark / Shortcut**: Judges or users can pin the app in the browser or OS dock for quick access
 - **Deep Links**: Shared invoice link opens `/invoice/:id` directly (public, no auth)
 
 ### Secondary Entry Points
@@ -302,7 +302,7 @@ ELSE
 IF (actual_sales / forecast_sales) < 0.80 FOR 2+ consecutive days
   THEN fire risk alert
   AND call LangGraph WHY analysis
-  AND push notification if PWA installed
+  AND highlight the alert in the desktop dashboard alert rail
 ```
 
 ---
@@ -327,21 +327,20 @@ IF (actual_sales / forecast_sales) < 0.80 FOR 2+ consecutive days
 
 ## 7. Responsive Behavior
 
-### Mobile (Primary — 360px+)
-- Bottom nav bar (Dashboard, Alerts, Inventory, Invoice)
-- Mic button floats center-bottom (FAB style)
-- Cards stack vertically
-- Font: 16px minimum for readability
+### Desktop (Primary — 1280px+)
+- Persistent sidebar navigation
+- Multi-panel dashboard with 3-column analytics layout
+- Voice assistant opens as a modal or side panel, with keyboard input always available
 
 ### Tablet (768px+)
-- Side nav replaces bottom bar
-- Two-column card grid on dashboard
-- Larger mic button
+- Collapsed sidebar or drawer navigation
+- Two-column dashboard grid
+- Voice panel remains available without taking over the full app shell
 
-### Desktop (1024px+)
-- Full sidebar nav
-- Three-column layout on dashboard
-- Voice still primary; keyboard fallback available
+### Mobile (390px+)
+- Single-column responsive adaptation of the desktop layout
+- Priority panels stack vertically
+- Keep the same routes and information hierarchy; no separate mobile-first navigation model
 
 ---
 

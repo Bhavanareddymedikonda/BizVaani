@@ -77,7 +77,7 @@ Browser → GET /api/dashboard → FastAPI → SQLite query → JSON → React r
 bizvaani/
 ├── frontend/                      # Next.js 14.2.x
 │   ├── public/
-│   │   └── icons/                 # PWA icons
+│   │   └── icons/                 # Web app icons / branding
 │   ├── src/
 │   │   ├── app/
 │   │   │   ├── layout.tsx         # Root layout, fonts, metadata
@@ -100,9 +100,9 @@ bizvaani/
 │   │   │       └── page.tsx       # Profile + CSV upload
 │   │   ├── components/
 │   │   │   ├── ui/                # shadcn/ui primitives
-│   │   │   ├── MicFAB.tsx         # Floating mic button
+│   │   │   ├── MicFAB.tsx         # Floating voice trigger / assistant launcher
 │   │   │   ├── VoiceModal.tsx     # Voice interaction overlay
-│   │   │   ├── BottomNav.tsx      # Mobile bottom navigation
+│   │   │   ├── SidebarNav.tsx     # Desktop-first primary navigation
 │   │   │   ├── AlertCard.tsx      # Risk alert card
 │   │   │   ├── ProductCard.tsx    # Dashboard product card
 │   │   │   ├── ImpactCard.tsx     # ₹ impact simulation card
@@ -370,11 +370,10 @@ export const MOCK_REGISTER_RESPONSE = {
 - [ ] Onboard form collects all fields
 - [ ] Step 2 shows 3 data path cards
 - [ ] Selecting a card + submitting redirects to `/dashboard`
-- [ ] Works on mobile viewport (360px wide)
+- [ ] Works cleanly on desktop-first layout and degrades responsively on smaller screens
 
 ---
 
-### TASK 3 — Member C (Beginner)
 **Feature:** Dashboard + Product Cards + Alert Cards
 
 #### Objective
@@ -385,7 +384,7 @@ Build the main dashboard screen that shows top products, risk alerts, and daily 
 frontend/src/app/dashboard/page.tsx
 frontend/src/components/ProductCard.tsx
 frontend/src/components/AlertCard.tsx
-frontend/src/components/BottomNav.tsx
+frontend/src/components/SidebarNav.tsx
 ```
 
 #### Mock Data Available
@@ -428,17 +427,17 @@ export const MOCK_DASHBOARD = {
    - Alert icon + product name + message
    - "Ask BizVaani" button (just logs to console for now)
 
-4. **BottomNav Component**
-   - Fixed bottom bar with 4 icons: Home, Alerts, Stock, Invoice
+4. **Sidebar Navigation Component**
+   - Persistent left navigation for Dashboard, Alerts, Forecast, Invoice, Settings
    - Highlight active page
-   - Leave space for the MicFAB (centered, above the nav)
+   - Include compact responsive collapse behavior for smaller screens
 
 #### Definition of Done
 - [ ] Dashboard renders with all 5 product cards from mock data
 - [ ] Alert cards show with correct severity colors
 - [ ] Stats row shows 3 numbers
-- [ ] BottomNav is fixed at bottom, 4 tabs work
-- [ ] Responsive on mobile (360px)
+- [ ] Sidebar navigation works on desktop and collapses cleanly on smaller screens
+- [ ] Responsive behavior remains usable below desktop widths
 
 ---
 
@@ -574,7 +573,7 @@ export const MOCK_CSV_PREVIEW = {
 #### Step-by-Step Instructions
 
 1. **MicFAB Component**
-   - Floating saffron circle, fixed bottom-center, above BottomNav
+   - Floating saffron/orange action button, positioned for desktop shell without conflicting with sidebar or content
    - Idle: mic icon, subtle shadow
    - Active (listening): pulse animation (orange glow ring expanding)
    - On tap: opens VoiceModal
@@ -618,7 +617,7 @@ export const MOCK_CSV_PREVIEW = {
    - Each alert has "Ask BizVaani" button → opens VoiceModal
 
 #### Definition of Done
-- [ ] MicFAB renders and pulses on tap
+- [ ] MicFAB renders cleanly within the desktop-first shell and pulses on tap
 - [ ] VoiceModal opens with simulated transcript + response card
 - [ ] ₹ Impact shows animated counter
 - [ ] Settings page shows profile + CSV upload zone
@@ -760,7 +759,7 @@ After every merge:
 |--------|------|---------------|---------------|
 | **Advanced (Pankaj)** | Architect + Backend + AI + Integration | FastAPI, SQLite, LangGraph, Sarvam/Groq integration, all API endpoints, Git management | Python, FastAPI, LangGraph, XGBoost |
 | **Member B** | Landing + Onboarding UI | Landing page, registration form, onboarding flow | HTML/CSS, basic React/Next.js |
-| **Member C** | Dashboard + Cards UI | Dashboard layout, ProductCard, AlertCard, BottomNav | React components, CSS flexbox/grid |
+| **Member C** | Dashboard + Cards UI | Desktop dashboard layout, ProductCard, AlertCard, SidebarNav | React components, CSS flexbox/grid |
 | **Member D** | Charts + Invoice UI | Recharts line chart, profit simulator, invoice form/preview | React, Recharts library, forms |
 | **Member E** | Voice UI + Settings | MicFAB, VoiceModal, waveform animation, Settings page, Alerts page | React, CSS animations, Zustand basics |
 
@@ -791,7 +790,7 @@ After every merge:
 | Duration | Task | Owner |
 |----------|------|-------|
 | Hours 1–6 | Landing page + Onboarding form | Member B |
-| Hours 1–6 | Dashboard layout + ProductCard + AlertCard + BottomNav | Member C |
+| Hours 1–6 | Desktop dashboard layout + ProductCard + AlertCard + SidebarNav | Member C |
 | Hours 1–8 | Forecast chart + Profit simulator + Invoice form | Member D |
 | Hours 1–8 | MicFAB + VoiceModal + Settings page + Alerts page | Member E |
 | Hours 1–12 | Backend: DB, Auth, Dashboard API, LangGraph, Voice WS | Advanced |

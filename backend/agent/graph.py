@@ -28,6 +28,7 @@ async def run_agent(
     transcript: str,
     language: str = "en",
     db: AsyncSession | None = None,
+    conversation_history: list[dict] | None = None,
 ) -> dict:
     """Execute the full agent pipeline and return the response dict."""
 
@@ -37,6 +38,7 @@ async def run_agent(
         "shop_id": shop_id,
         "query": transcript,
         "language": language,
+        "conversation_history": conversation_history or [],
         "sales_data": None,
         "market_data": None,
         "forecast_data": None,
@@ -48,19 +50,16 @@ async def run_agent(
         "alert_triggered": None,
     }
 
+
     if not db:
-        # No DB session — return fallback
-        from agent.nodes import _generate_fallback
-        return _generate_fallback(state)
+        raise ValueError("Database session is required for real connections.")
 
     # Node 1: Classify intent
     state = await classify_intent(state, db)
 
-    # Nodes 2 & 3: Parallel fan-out (sales + market fetch)
-    state_sales, state_market = await asyncio.gather(
-        fetch_sales_data(dict(state), db),  # type: ignore
-        fetch_market_data(dict(state), db),  # type: ignore
-    )
+    # Nodes 2 & 3: Sequential execution (Shared DB sessions are not coroutine-safe)
+    state_sales = await fetch_sales_data(dict(state), db)  # type: ignore
+    state_market = await fetch_market_data(dict(state_sales), db)  # type: ignore
 
     # Merge parallel results back into state
     state["sales_data"] = state_sales.get("sales_data")

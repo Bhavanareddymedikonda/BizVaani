@@ -1,8 +1,9 @@
 import { create } from "zustand";
 
-interface Product {
+export interface Product {
   id: number;
   name: string;
+  product_name?: string;
   today_qty: number;
   today_revenue: number;
   trend_pct: number;
@@ -10,19 +11,23 @@ interface Product {
   risk_level: "HIGH" | "MEDIUM" | "LOW";
 }
 
-interface Alert {
+export interface Alert {
   id: number;
   product_name: string;
+  level?: "HIGH" | "MEDIUM" | "LOW";
   severity: "HIGH" | "MEDIUM" | "LOW";
   message: string;
+  reason?: string;
   created_at: string;
 }
 
-interface Shop {
+export interface Shop {
   id: number;
   shop_name: string;
   city: string;
+  state?: string;
   categories: string[];
+  language?: string;
 }
 
 interface TotalToday {
@@ -32,41 +37,52 @@ interface TotalToday {
 }
 
 interface ShopState {
-  shop: Shop | null;
-  products: Product[];
-  alerts: Alert[];
+  shop:       Shop | null;
+  products:   Product[];
+  alerts:     Alert[];
   totalToday: TotalToday | null;
-  isLoading: boolean;
-  userName: string;
+  isLoading:  boolean;
+  shopId:     number | null;
 
   setDashboardData: (data: {
-    shop: Shop;
-    top_products: Product[];
-    alerts: Alert[];
-    total_today: TotalToday;
+    shop?: Shop;
+    top_products?: Product[];
+    products?: Product[];
+    alerts?: Alert[];
+    total_today?: TotalToday;
   }) => void;
-  setLoading: (loading: boolean) => void;
-  setUserName: (name: string) => void;
-  addAlert: (alert: Alert) => void;
+  setProducts: (products: Product[]) => void;
+  setLoading:  (loading: boolean) => void;
+  addAlert:    (alert: Alert) => void;
+  setShopId:   (id: number) => void;
 }
 
 export const useShopStore = create<ShopState>((set) => ({
-  shop: null,
-  products: [],
-  alerts: [],
+  shop:       null,
+  products:   [],
+  alerts:     [],
   totalToday: null,
-  isLoading: true,
-  userName: "",
+  isLoading:  true,
+  shopId:     null,
 
   setDashboardData: (data) =>
     set({
-      shop: data.shop,
-      products: data.top_products,
-      alerts: data.alerts,
-      totalToday: data.total_today,
-      isLoading: false,
+      shop:       data.shop ?? null,
+      products:   data.top_products ?? data.products ?? [],
+      alerts:     data.alerts ?? [],
+      totalToday: data.total_today ?? null,
+      isLoading:  false,
+      shopId:     data.shop?.id ?? null,
     }),
-  setLoading: (loading) => set({ isLoading: loading }),
-  setUserName: (name) => set({ userName: name }),
-  addAlert: (alert) => set((state) => ({ alerts: [alert, ...state.alerts] })),
+
+  setProducts: (products) => set({ products }),
+  setLoading:  (loading)  => set({ isLoading: loading }),
+  setShopId:   (id)       => set({ shopId: id }),
+
+  addAlert: (alert) =>
+    set((state) => {
+      // Deduplicate: don't add if same id already exists
+      if (state.alerts.some((a) => a.id === alert.id)) return {};
+      return { alerts: [alert, ...state.alerts] };
+    }),
 }));

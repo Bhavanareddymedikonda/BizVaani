@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { getDashboard } from "../../lib/api";
 import ProductCard from "../../components/ProductCard";
 import AlertCard from "../../components/AlertCard";
@@ -8,10 +11,44 @@ import BottomNav from "../../components/BottomNav";
 // See: APP_FLOW.md (Flow 2, 3), FRONTEND_GUIDELINES.md (Section 4)
 // ============================================================
 
-export default async function DashboardPage() {
-  const dashboard: any = await getDashboard();
+export default function DashboardPage() {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [dashboard, setDashboard] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadDashboard() {
+      try {
+        const data = await getDashboard();
+        setDashboard(data);
+      } catch (err) {
+        console.error("Failed to fetch dashboard:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadDashboard();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen selection:bg-[#c084fc] selection:text-white font-sans pb-24 md:pb-0 pt-20 md:pt-6 flex items-center justify-center">
+        <div className="w-12 h-12 rounded-full border-4 border-[#c084fc]/30 border-t-[#c084fc] animate-spin" />
+      </div>
+    );
+  }
+
+  if (!dashboard) {
+    return (
+      <div className="min-h-screen selection:bg-[#c084fc] selection:text-white font-sans pb-24 md:pb-0 pt-20 md:pt-6 flex flex-col items-center justify-center">
+        <p className="text-[#f87171] mb-4">Error loading dashboard data.</p>
+        <button onClick={() => window.location.reload()} className="advanced-btn px-6 py-2">Retry</button>
+      </div>
+    );
+  }
   
   const highOrMediumAlerts = dashboard.alerts?.filter(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (a: any) => a.severity === "HIGH" || a.severity === "MEDIUM"
   ) || [];
 
@@ -21,10 +58,10 @@ export default async function DashboardPage() {
       <header className="px-4 md:px-12 py-6 mb-4 flex flex-col md:flex-row md:items-center justify-between md:ml-20">
         <div>
           <h1 className="text-3xl font-black tracking-wide text-white">
-            Good morning, <span className="text-[#c084fc]">Ramesh</span>
+            Good morning, <span className="text-[#c084fc]">{dashboard.user?.name || "Ramesh"}</span>
           </h1>
           <p className="font-bold text-xs uppercase tracking-widest text-[#c084fc]/60 mt-1">
-            {dashboard.shop.shop_name} • {dashboard.shop.city}
+            {dashboard.shop?.shop_name || "Ramesh Kirana Store"} • {dashboard.shop?.city || "Nagpur"}
           </p>
         </div>
       </header>
@@ -35,18 +72,18 @@ export default async function DashboardPage() {
           <div className="advanced-card !bg-gradient-to-br !from-[#9333ea] !to-[#4c1d95] text-white p-6 col-span-2 md:col-span-1 shadow-[0_8px_32px_rgba(147,51,234,0.4)] !border-none flex flex-col justify-center">
             <h2 className="text-xs font-bold uppercase tracking-wider mb-1 opacity-90 text-[#e9d5ff]">Total Revenue Today</h2>
             <div className="text-5xl md:text-6xl font-black mt-2 drop-shadow-md tracking-tighter">
-              ₹{dashboard.total_today.revenue.toLocaleString()}
+              ₹{dashboard.total_today?.revenue?.toLocaleString() || 0}
             </div>
           </div>
           
           <div className="advanced-card p-6 flex flex-col justify-center">
             <h2 className="text-xs font-bold uppercase tracking-wider mb-2 text-[#c084fc]/70">Items Sold</h2>
-            <div className="text-4xl font-black text-[#f3e8ff] drop-shadow-[0_0_12px_rgba(255,255,255,0.3)]">{dashboard.total_today.items_sold}</div>
+            <div className="text-4xl font-black text-[#f3e8ff] drop-shadow-[0_0_12px_rgba(255,255,255,0.3)]">{dashboard.total_today?.items_sold || 0}</div>
           </div>
           
           <div className="advanced-card p-6 flex flex-col justify-center">
             <h2 className="text-xs font-bold uppercase tracking-wider mb-2 text-[#c084fc]/70">Est. Profit</h2>
-            <div className="text-4xl font-black text-[#4ade80] drop-shadow-[0_0_12px_rgba(74,222,128,0.4)]">₹{dashboard.total_today.profit_estimate.toLocaleString()}</div>
+            <div className="text-4xl font-black text-[#4ade80] drop-shadow-[0_0_12px_rgba(74,222,128,0.4)]">₹{dashboard.total_today?.profit_estimate?.toLocaleString() || 0}</div>
           </div>
         </section>
 
@@ -60,6 +97,7 @@ export default async function DashboardPage() {
               </h2>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
+              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
               {highOrMediumAlerts.map((alert: any) => (
                 <AlertCard
                   key={alert.id}
@@ -80,7 +118,8 @@ export default async function DashboardPage() {
             </h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
-            {dashboard.top_products.map((product: any) => (
+            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+            {dashboard.top_products?.map((product: any) => (
               <ProductCard
                 key={product.id}
                 name={product.name}
