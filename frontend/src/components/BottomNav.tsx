@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Bell, Package, FileText, Settings, Menu, X } from "lucide-react";
+import { Home, Bell, Package, FileText, Settings, Menu, X, TrendingUp } from "lucide-react";
 
 export default function AppNavigation() {
   const pathname = usePathname();
@@ -12,6 +12,7 @@ export default function AppNavigation() {
   const navItems = [
     { name: "Home", path: "/dashboard", icon: Home },
     { name: "Alerts", path: "/alerts", icon: Bell },
+    { name: "Forecast", path: "/forecast", icon: TrendingUp },
     { name: "Stock", path: "/inventory", icon: Package },
     { name: "Invoice", path: "/invoice", icon: FileText },
   ];
