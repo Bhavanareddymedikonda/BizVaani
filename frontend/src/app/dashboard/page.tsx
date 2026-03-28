@@ -108,32 +108,40 @@ export default function DashboardPage() {
       </header>
 
       <main className="mx-auto max-w-7xl px-4 md:ml-20 md:px-12">
-        <section className="mb-10 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5 md:gap-6">
-          <div className="advanced-card col-span-2 flex flex-col justify-center !border-none !bg-gradient-to-br !from-[#9333ea] !to-[#4c1d95] p-6 text-white shadow-[0_8px_32px_rgba(147,51,234,0.4)] md:col-span-1">
-            <h2 className="mb-1 text-xs font-bold uppercase tracking-wider text-[#e9d5ff] opacity-90">Total Revenue Today</h2>
-            <div className="mt-2 text-5xl font-black tracking-tighter drop-shadow-md md:text-6xl">
+        <section className="mb-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5 md:gap-6">
+          <div className="advanced-card col-span-1 min-w-0 overflow-hidden !border-none !bg-gradient-to-br !from-[#9333ea] !to-[#4c1d95] p-5 text-white shadow-[0_8px_32px_rgba(147,51,234,0.4)] sm:col-span-2 lg:col-span-1 md:p-6">
+            <h2 className="mb-1 text-[11px] font-bold uppercase tracking-[0.18em] text-[#e9d5ff] opacity-90">Total Revenue Today</h2>
+            <div className="mt-2 max-w-full overflow-hidden whitespace-nowrap text-[clamp(2rem,3vw,3.8rem)] font-black leading-none tracking-[-0.08em] drop-shadow-md">
               Rs.{dashboard.total_today?.revenue?.toLocaleString() || 0}
             </div>
           </div>
 
-          <div className="advanced-card flex flex-col justify-center p-6">
-            <h2 className="mb-2 text-xs font-bold uppercase tracking-wider text-[#c084fc]/70">Items Sold</h2>
-            <div className="text-4xl font-black text-[#f3e8ff] drop-shadow-[0_0_12px_rgba(255,255,255,0.3)]">{dashboard.total_today?.items_sold || 0}</div>
+          <div className="advanced-card min-w-0 overflow-hidden p-5 md:p-6">
+            <h2 className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-[#c084fc]/70">Items Sold</h2>
+            <div className="overflow-hidden text-[clamp(2.2rem,3.2vw,3.8rem)] font-black leading-none text-[#f3e8ff] drop-shadow-[0_0_12px_rgba(255,255,255,0.3)]">
+              {dashboard.total_today?.items_sold || 0}
+            </div>
           </div>
 
-          <div className="advanced-card flex flex-col justify-center p-6">
-            <h2 className="mb-2 text-xs font-bold uppercase tracking-wider text-[#c084fc]/70">Est. Profit</h2>
-            <div className="text-4xl font-black text-[#4ade80] drop-shadow-[0_0_12px_rgba(74,222,128,0.4)]">Rs.{dashboard.total_today?.profit_estimate?.toLocaleString() || 0}</div>
+          <div className="advanced-card min-w-0 overflow-hidden p-5 md:p-6">
+            <h2 className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-[#c084fc]/70">Est. Profit</h2>
+            <div className="overflow-hidden text-[clamp(2.2rem,3vw,3.4rem)] font-black leading-none text-[#4ade80] drop-shadow-[0_0_12px_rgba(74,222,128,0.4)]">
+              Rs.{dashboard.total_today?.profit_estimate?.toLocaleString() || 0}
+            </div>
           </div>
 
-          <div className="advanced-card flex flex-col justify-center p-6">
-            <h2 className="mb-2 text-xs font-bold uppercase tracking-wider text-[#c084fc]/70">Low Stock SKU</h2>
-            <div className="text-4xl font-black text-[#fbbf24]">{dashboard.stock_summary?.low_stock_count || 0}</div>
+          <div className="advanced-card min-w-0 overflow-hidden p-5 md:p-6">
+            <h2 className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-[#c084fc]/70">Low Stock SKU</h2>
+            <div className="overflow-hidden text-[clamp(2.2rem,3vw,3.4rem)] font-black leading-none text-[#fbbf24]">
+              {dashboard.stock_summary?.low_stock_count || 0}
+            </div>
           </div>
 
-          <div className="advanced-card flex flex-col justify-center p-6">
-            <h2 className="mb-2 text-xs font-bold uppercase tracking-wider text-[#c084fc]/70">Inventory Value</h2>
-            <div className="text-4xl font-black text-[#60a5fa]">Rs.{dashboard.stock_summary?.inventory_value?.toLocaleString() || 0}</div>
+          <div className="advanced-card min-w-0 overflow-hidden p-5 md:p-6">
+            <h2 className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-[#c084fc]/70">Inventory Value</h2>
+            <div className="overflow-hidden text-[clamp(2.2rem,3vw,3.4rem)] font-black leading-none text-[#60a5fa]">
+              Rs.{dashboard.stock_summary?.inventory_value?.toLocaleString() || 0}
+            </div>
           </div>
         </section>
 
