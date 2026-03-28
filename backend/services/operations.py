@@ -159,7 +159,7 @@ async def _parse_invoice_request(query: str, shop_id: int, db: AsyncSession) -> 
     customer_name = customer_match.group(1).strip()
     items_text = customer_match.group(2).strip()
     item_matches = re.findall(
-        r"(\d+(?:\.\d+)?)\s+([a-zA-Z][a-zA-Z\s]+?)(?:\s+at\s+(\d+(?:\.\d+)?))?(?=,| and |$)",
+        r"(\d+(?:\.\d+)?)\s*(?:kg|kgs|pcs|pieces|units|packets|litres?|ltr|gm|g|ml)?\s+(?:of\s+)?([a-zA-Z][a-zA-Z0-9\s-]+?)(?:\s+(?:at|for|@)\s*(?:rs\.?|₹)?\s*(\d+(?:\.\d+)?)\s*(?:rupees|rs\.?|₹|/-)?)?(?=,| and |$)",
         items_text,
         re.IGNORECASE,
     )
