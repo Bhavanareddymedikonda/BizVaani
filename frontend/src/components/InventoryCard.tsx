@@ -2,6 +2,7 @@
 
 import { AlertOctagon, Package, RefreshCw, TrendingDown } from "lucide-react";
 import type { InventoryItem } from "@/lib/api";
+import { cn } from "@/lib/cn";
 
 export default function InventoryCard({
   item,
@@ -12,64 +13,58 @@ export default function InventoryCard({
 }) {
   const isCritical = item.status === "CRITICAL";
   const isLow = item.status === "LOW_STOCK";
+  const statusClass = isCritical ? "status-danger" : isLow ? "status-warning" : "status-success";
 
   return (
-    <div
-      className={`advanced-card relative flex flex-col justify-between overflow-hidden p-5 ${
-        isCritical ? "border-red-500/30 bg-red-500/10" : ""
-      }`}
-    >
-      {isCritical && <div className="absolute bottom-0 left-0 top-0 w-1 bg-red-500 shadow-[0_0_12px_rgba(239,68,68,0.8)]" />}
-      {isLow && !isCritical && <div className="absolute bottom-0 left-0 top-0 w-1 bg-yellow-400 shadow-[0_0_12px_rgba(250,204,21,0.8)]" />}
-
+    <article className="surface flex flex-col justify-between p-5 transition-transform duration-200 hover:-translate-y-1">
       <div>
-        <div className="mb-4 flex items-start justify-between pl-2">
+        <div className="mb-5 flex items-start justify-between gap-4">
           <div>
-            <span className="rounded-md border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-white/50">
+            <span className="status-badge status-info">
               {item.category}
             </span>
-            <h3 className="mt-1 text-xl font-extrabold tracking-wide text-white">{item.name}</h3>
+            <h3 className="mt-3 text-xl font-semibold tracking-[-0.03em] text-[var(--color-text)]">{item.name}</h3>
           </div>
-          <div className="rounded-xl border border-white/10 bg-white/5 p-2">
+          <div className="rounded-2xl bg-[var(--color-panel-muted)] p-2.5">
             {isCritical ? (
-              <AlertOctagon className="text-red-400" size={24} />
+              <AlertOctagon className="text-[var(--color-danger)]" size={22} />
             ) : isLow ? (
-              <TrendingDown className="text-yellow-400" size={24} />
+              <TrendingDown className="text-[var(--color-warning)]" size={22} />
             ) : (
-              <Package className="text-green-400" size={24} />
+              <Package className="text-[var(--color-success)]" size={22} />
             )}
           </div>
         </div>
 
-        <div className="mb-4 flex gap-4 pl-2">
-          <div>
-            <p className="mb-0.5 text-[10px] font-bold uppercase tracking-wider text-[#c084fc]/60">In Stock</p>
-            <p className={`text-3xl font-black tracking-tighter ${isCritical ? "text-red-400" : isLow ? "text-yellow-400" : "text-[#c084fc]"}`}>
-              {item.in_stock} <span className="text-sm font-bold opacity-60">{item.unit}</span>
+        <div className="mb-4 grid grid-cols-2 gap-3">
+          <div className="surface-muted px-3 py-3">
+            <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--color-text-muted)]">In stock</p>
+            <p className="mt-1 text-2xl font-semibold tracking-[-0.03em] text-[var(--color-text)]">
+              {item.in_stock} <span className="text-sm font-medium text-[var(--color-text-soft)]">{item.unit}</span>
             </p>
           </div>
-          <div className="border-l border-white/10 pl-4">
-            <p className="mb-0.5 text-[10px] font-bold uppercase tracking-wider text-[#c084fc]/60">Required</p>
-            <p className="mt-1 text-xl font-black text-white opacity-80">
-              {item.minimum_required} <span className="text-xs font-bold">{item.unit}</span>
+          <div className="surface-muted px-3 py-3">
+            <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--color-text-muted)]">Minimum</p>
+            <p className="mt-1 text-2xl font-semibold tracking-[-0.03em] text-[var(--color-text)]">
+              {item.minimum_required} <span className="text-sm font-medium text-[var(--color-text-soft)]">{item.unit}</span>
             </p>
           </div>
         </div>
 
-        <div className="pl-2 text-xs text-white/65">
+        <div className="text-sm text-[var(--color-text-soft)]">
           Avg daily demand: {item.avg_daily_qty} {item.unit}
         </div>
       </div>
 
-      <div className="mt-4 flex items-center justify-between border-t border-white/10 pl-2 pt-4">
-        <p className={`text-[10px] font-bold uppercase tracking-wider ${isCritical || isLow ? "text-red-400" : "text-green-400"}`}>
+      <div className="mt-5 flex items-center justify-between border-t border-[var(--color-border)] pt-4">
+        <span className={cn("status-badge", statusClass)}>
           {isCritical || isLow ? "Restock needed" : "Healthy stock"}
-        </p>
+        </span>
 
-        <button onClick={() => onUpdate(item)} className="advanced-btn-sm flex items-center gap-1.5 px-4 py-2 text-[10px] sm:text-xs">
+        <button onClick={() => onUpdate(item)} className="btn-secondary px-4 py-2 text-xs">
           <RefreshCw size={14} /> Update
         </button>
       </div>
-    </div>
+    </article>
   );
 }

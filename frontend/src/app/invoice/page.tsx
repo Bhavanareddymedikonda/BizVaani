@@ -1,16 +1,10 @@
 "use client";
 
-// ============================================================
-// Invoice Page — Task: Member D
-// See: APP_FLOW.md (Flow 7), BizVaani_Developer_Reference.md (Section 5)
-// ============================================================
-
 import { useState } from "react";
+import { Plus } from "lucide-react";
+import { AppShell, PageHeader, SectionHeader } from "@/components/AppShell";
 import { generateInvoice } from "@/lib/api";
 import InvoicePreview from "@/components/InvoicePreview";
-import BottomNav from "@/components/BottomNav";
-import MicFAB from "@/components/MicFAB";
-import { Plus, Receipt } from "lucide-react";
 
 interface LineItem {
   product: string;
@@ -21,11 +15,8 @@ interface LineItem {
 
 export default function InvoicePage() {
   const [customerName, setCustomerName] = useState("");
-  const [items, setItems] = useState<LineItem[]>([
-    { product: "", qty: 0, unit_price: 0, gst_rate: 5 },
-  ]);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [result, setResult] = useState<any>(null);
+  const [items, setItems] = useState<LineItem[]>([{ product: "", qty: 0, unit_price: 0, gst_rate: 5 }]);
+  const [result, setResult] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(false);
 
   const addItem = () => {
@@ -34,8 +25,7 @@ export default function InvoicePage() {
 
   const updateItem = (index: number, field: keyof LineItem, value: string | number) => {
     const updated = [...items];
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (updated[index] as any)[field] = value;
+    updated[index] = { ...updated[index], [field]: value };
     setItems(updated);
   };
 
@@ -47,7 +37,7 @@ export default function InvoicePage() {
         customer_name: customerName,
         items,
       });
-      setResult(res);
+      setResult(res as Record<string, unknown>);
     } catch (err) {
       console.error("Invoice generation failed:", err);
     } finally {
@@ -56,93 +46,85 @@ export default function InvoicePage() {
   };
 
   return (
-    <div className="min-h-screen selection:bg-[#c084fc] selection:text-white font-sans pb-24 md:pb-0 pt-20 md:pt-6">
-      <header className="px-4 md:px-12 py-6 mb-4 flex flex-col md:flex-row md:items-center justify-between md:ml-20">
-        <div>
-          <h1 className="text-3xl font-black tracking-wide text-white uppercase flex items-center gap-2">
-            <Receipt className="text-[#c084fc]" size={28} /> GST <span className="text-[#c084fc]">Invoice</span>
-          </h1>
-        </div>
-      </header>
+    <AppShell topbar={<span className="status-badge status-info">GST-ready invoice flow</span>}>
+      <PageHeader
+        eyebrow="Billing"
+        title="Invoices"
+        description="Draft a customer invoice, check the tax split, and generate a downloadable PDF."
+      />
 
-      <main className="px-4 md:px-12 max-w-4xl mx-auto md:ml-20 py-2">
-        {!result ? (
-          <div className="space-y-6">
-            {/* Customer Name */}
-            <div className="advanced-card p-6">
-              <label className="text-xs font-bold text-[#c084fc]/70 uppercase tracking-wider mb-2 block">Customer Name</label>
-              <input
-                placeholder="Enter customer name..."
-                value={customerName}
-                onChange={(e) => setCustomerName(e.target.value)}
-                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-2xl text-base font-bold text-white focus:outline-none focus:ring-2 focus:ring-[#c084fc]/40 transition-all"
-              />
-            </div>
-
-            {/* Line Items */}
-            <div className="space-y-4">
-              <div className="flex justify-between items-end border-b border-white/10 pb-2">
-                <h2 className="text-sm font-black uppercase tracking-widest text-[#c084fc]/70">Line Items</h2>
+      {!result ? (
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+          <section className="surface p-6">
+            <SectionHeader title="Invoice draft" description="Capture customer and line items with the current GST split." />
+            <div className="space-y-6">
+              <div>
+                <label className="eyebrow">Customer name</label>
+                <input placeholder="Enter customer name" value={customerName} onChange={(e) => setCustomerName(e.target.value)} className="field mt-2" />
               </div>
-              
-              {items.map((item, i) => (
-                <div key={i} className="advanced-card p-5 relative">
-                  <div className="mb-4">
-                    <label className="text-[10px] font-bold text-[#c084fc]/70 uppercase tracking-wider mb-1 block">Product Name</label>
-                    <input placeholder="e.g. 10kg Aashirvaad Atta" value={item.product} onChange={(e) => updateItem(i, "product", e.target.value)} className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-sm font-bold text-white focus:outline-none focus:ring-2 focus:ring-[#c084fc]/40" />
-                  </div>
-                  
-                  <div className="grid grid-cols-3 gap-3">
-                    <div>
-                      <label className="text-[10px] font-bold text-[#c084fc]/70 uppercase tracking-wider mb-1 block">Qty</label>
-                      <input placeholder="0" type="number" value={item.qty || ""} onChange={(e) => updateItem(i, "qty", Number(e.target.value))} className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm font-bold text-white focus:outline-none focus:ring-2 focus:ring-[#c084fc]/40" />
-                    </div>
-                    <div>
-                      <label className="text-[10px] font-bold text-[#c084fc]/70 uppercase tracking-wider mb-1 block">Price (₹)</label>
-                      <input placeholder="0" type="number" value={item.unit_price || ""} onChange={(e) => updateItem(i, "unit_price", Number(e.target.value))} className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm font-bold text-white focus:outline-none focus:ring-2 focus:ring-[#c084fc]/40" />
-                    </div>
-                    <div>
-                      <label className="text-[10px] font-bold text-[#c084fc]/70 uppercase tracking-wider mb-1 block">GST</label>
-                      <select value={item.gst_rate} onChange={(e) => updateItem(i, "gst_rate", Number(e.target.value))} className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm font-bold text-white focus:outline-none appearance-none focus:ring-2 focus:ring-[#c084fc]/40">
-                        <option value={5} className="bg-[#0D0914]">5%</option>
-                        <option value={12} className="bg-[#0D0914]">12%</option>
-                        <option value={18} className="bg-[#0D0914]">18%</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
 
-            <button onClick={addItem} className="w-full py-4 border-2 border-dashed border-white/10 rounded-2xl text-[#c084fc]/60 font-bold uppercase tracking-wider hover:border-[#c084fc]/50 hover:text-[#c084fc] transition-colors flex items-center justify-center gap-2 hover:bg-white/5">
-              <Plus size={18} /> Add Another Item
-            </button>
+              <div className="space-y-4">
+                {items.map((item, i) => (
+                  <div key={i} className="surface-muted p-4">
+                    <div className="mb-4">
+                      <label className="eyebrow">Product name</label>
+                      <input placeholder="e.g. Aashirvaad Atta" value={item.product} onChange={(e) => updateItem(i, "product", e.target.value)} className="field mt-2" />
+                    </div>
+                    <div className="grid gap-3 md:grid-cols-3">
+                      <div>
+                        <label className="eyebrow">Qty</label>
+                        <input placeholder="0" type="number" value={item.qty || ""} onChange={(e) => updateItem(i, "qty", Number(e.target.value))} className="field mt-2" />
+                      </div>
+                      <div>
+                        <label className="eyebrow">Price</label>
+                        <input placeholder="0" type="number" value={item.unit_price || ""} onChange={(e) => updateItem(i, "unit_price", Number(e.target.value))} className="field mt-2" />
+                      </div>
+                      <div>
+                        <label className="eyebrow">GST</label>
+                        <select value={item.gst_rate} onChange={(e) => updateItem(i, "gst_rate", Number(e.target.value))} className="field mt-2">
+                          <option value={5}>5%</option>
+                          <option value={12}>12%</option>
+                          <option value={18}>18%</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
 
-            <div className="pt-4">
-              <button onClick={handleGenerate} disabled={loading} className="advanced-btn w-full py-4 text-base tracking-widest disabled:opacity-50 disabled:scale-100">
-                {loading ? "Generating PDF..." : "Generate GST Invoice"}
+              <button onClick={addItem} className="btn-secondary w-full">
+                <Plus size={16} />
+                Add another item
               </button>
             </div>
-          </div>
-        ) : (
-          <div className="advanced-card p-6">
-            <InvoicePreview
-              invoice={result}
-              customerName={customerName}
-              items={items}
-            />
-            <button 
-              onClick={() => {setResult(null); setItems([{ product: "", qty: 0, unit_price: 0, gst_rate: 5 }]); setCustomerName("")}}
-              className="mt-6 w-full py-3 border border-white/10 rounded-xl text-white/60 font-bold uppercase tracking-widest hover:border-white/40 hover:text-white transition-colors"
-            >
-              Start New Invoice
-            </button>
-          </div>
-        )}
-      </main>
+          </section>
 
-      <MicFAB />
-      <BottomNav />
-    </div>
+          <aside className="space-y-6">
+            <div className="surface p-5">
+              <p className="eyebrow">Ready state</p>
+              <h2 className="mt-2 text-xl font-semibold tracking-[-0.03em] text-[var(--color-text)]">Generate final invoice</h2>
+              <p className="mt-2 text-sm leading-6 text-[var(--color-text-soft)]">The current flow preserves the existing backend behavior and generates the PDF after submission.</p>
+              <button onClick={handleGenerate} disabled={loading} className="btn-primary mt-5 w-full disabled:opacity-60">
+                {loading ? "Generating..." : "Generate GST invoice"}
+              </button>
+            </div>
+          </aside>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          <InvoicePreview invoice={result as never} customerName={customerName} items={items} />
+          <button
+            onClick={() => {
+              setResult(null);
+              setItems([{ product: "", qty: 0, unit_price: 0, gst_rate: 5 }]);
+              setCustomerName("");
+            }}
+            className="btn-secondary"
+          >
+            Start new invoice
+          </button>
+        </div>
+      )}
+    </AppShell>
   );
 }

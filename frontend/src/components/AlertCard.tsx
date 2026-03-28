@@ -1,6 +1,7 @@
 "use client";
 
-import { AlertCircle, AlertTriangle, Info } from "lucide-react";
+import { AlertCircle, AlertTriangle, ChevronRight, Info } from "lucide-react";
+import { cn } from "@/lib/cn";
 
 interface AlertCardProps {
   productName: string;
@@ -21,18 +22,8 @@ export default function AlertCard({
   const isMedium = severity === "MEDIUM";
 
   const Icon = isHigh ? AlertCircle : isMedium ? AlertTriangle : Info;
-  
-  const bgColors = {
-    HIGH: "bg-[#231A3F]/50 border-red-500/20 hover:border-red-500/40",
-    MEDIUM: "bg-[#231A3F]/50 border-yellow-500/20 hover:border-yellow-500/40",
-    LOW: "bg-[#231A3F]/50 border-blue-500/20 hover:border-blue-500/40"
-  };
-
-  const badgeColors = {
-    HIGH: "bg-red-500/20 text-red-400 border-red-500/30",
-    MEDIUM: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
-    LOW: "bg-blue-500/20 text-blue-400 border-blue-500/30"
-  };
+  const badgeClass = severity === "HIGH" ? "status-danger" : severity === "MEDIUM" ? "status-warning" : "status-info";
+  const iconTone = severity === "HIGH" ? "text-[var(--color-danger)]" : severity === "MEDIUM" ? "text-[var(--color-warning)]" : "text-[var(--color-info)]";
 
   const handleAsk = () => {
     if (onAskBizVaani) {
@@ -50,42 +41,41 @@ export default function AlertCard({
   };
 
   return (
-    <div className={`advanced-card p-5 relative flex flex-col gap-3 transition-transform hover:-translate-y-1 overflow-hidden pointer-events-auto ${bgColors[severity]} border backdrop-blur-xl`}>
-      
-      {/* Visual Accent Bar */}
-      <div className={`absolute left-0 top-0 bottom-0 w-1 ${isHigh ? 'bg-red-500 shadow-[0_0_12px_rgba(239,68,68,0.8)]' : isMedium ? 'bg-yellow-400 shadow-[0_0_12px_rgba(250,204,21,0.8)]' : 'bg-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.8)]'}`} />
-
-      <div className="flex justify-between items-start gap-2 pl-2">
-        <div className="flex items-center gap-2.5">
-          <div className={`p-1.5 rounded-xl bg-white/5 border border-white/10`}>
-            <Icon className={isHigh ? "text-red-400" : isMedium ? "text-yellow-400" : "text-blue-400"} size={22} strokeWidth={2.5} />
+    <article className="surface flex flex-col gap-4 p-5 transition-transform duration-200 hover:-translate-y-1">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start gap-3">
+          <div className="mt-0.5 rounded-2xl bg-[var(--color-panel-muted)] p-2.5">
+            <Icon className={iconTone} size={20} strokeWidth={2.4} />
           </div>
-          <h4 className="font-extrabold text-lg uppercase text-white tracking-wide">{productName} Alert</h4>
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--color-text-muted)]">Risk alert</p>
+            <h4 className="mt-1 text-lg font-semibold tracking-[-0.03em] text-[var(--color-text)]">{productName}</h4>
+          </div>
         </div>
-        <span className={`text-[10px] uppercase font-bold px-2.5 py-1 rounded-lg border ${badgeColors[severity]}`}>
+        <span className={cn("status-badge", badgeClass)}>
           {severity}
         </span>
       </div>
-      
-      <p className="text-sm font-medium text-white/70 leading-snug pl-2 mt-1 drop-shadow-sm">
-        {message}
-      </p>
+
+      <p className="text-sm leading-6 text-[var(--color-text)]">{message}</p>
 
       {reason && (
-        <p className="pl-2 text-xs leading-6 text-white/45">
+        <p className="rounded-2xl bg-[rgba(15,23,42,0.05)] px-3 py-3 text-sm leading-6 text-[var(--color-text-soft)]">
           {reason}
         </p>
       )}
 
-      <div className="mt-2 pl-2">
-        <button 
+      <div className="mt-1">
+        <button
           type="button"
           onClick={handleAsk}
-          className="advanced-btn-sm px-4 py-2 text-[10px] sm:text-xs"
+          className="btn-secondary"
         >
           Ask BizVaani
+          <ChevronRight size={14} />
         </button>
       </div>
-    </div>
+    </article>
   );
 }
+

@@ -24,17 +24,16 @@ export default function MicFAB() {
         data-mic-fab
         onClick={() => setIsOpen(true)}
         aria-label="BizVaani se Poochho"
-        className="fixed z-50 flex items-center justify-center transition-all duration-200 hover:-translate-y-0.5 active:scale-95"
+        className="fixed z-50 flex items-center justify-center transition-all duration-200 hover:-translate-y-1 active:scale-95"
         style={{
-          /* Mobile: centered above bottom nav */
           bottom: "calc(env(safe-area-inset-bottom, 0px) + 72px)",
           left: "50%",
           transform: "translateX(-50%)",
-          width: 56,
-          height: 56,
-          borderRadius: "50%",
-          background: "linear-gradient(135deg, var(--color-primary-500), var(--color-primary-700))",
-          boxShadow: "var(--shadow-glow-orange), var(--shadow-clay-soft)",
+          width: 62,
+          height: 62,
+          borderRadius: "20px",
+          background: "linear-gradient(135deg, #0f766e 0%, #0f4c81 100%)",
+          boxShadow: "0 18px 32px rgba(15, 76, 129, 0.28)",
         }}
       >
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
@@ -51,8 +50,8 @@ export default function MicFAB() {
         @media (min-width: 1024px) {
           [data-mic-fab] {
             left: auto !important;
-            right: 32px !important;
-            bottom: 32px !important;
+            right: 28px !important;
+            bottom: 28px !important;
             transform: none !important;
           }
         }
@@ -67,3 +66,4 @@ export default function MicFAB() {
     </>
   );
 }
+

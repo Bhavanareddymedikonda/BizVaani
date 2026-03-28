@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import AlertCard from "./AlertCard";
 
@@ -19,13 +19,9 @@ interface Props {
 export default function AlertsPanel({ alerts }: Props) {
   if (alerts.length === 0) {
     return (
-      <div
-        className="clay-card p-8 text-center"
-        style={{ color: "var(--color-text-soft)" }}
-      >
-        <p className="text-3xl mb-2">✅</p>
-        <p className="font-semibold text-sm">Sab kuch theek hai</p>
-        <p className="text-xs mt-1">Koi anomaly nahi mili aaj</p>
+      <div className="empty-state">
+        <p className="text-lg font-semibold text-[var(--color-text)]">No active alerts</p>
+        <p className="mt-2 text-sm text-[var(--color-text-soft)]">Current inventory and sales patterns look stable.</p>
       </div>
     );
   }
@@ -33,7 +29,13 @@ export default function AlertsPanel({ alerts }: Props) {
   return (
     <div className="space-y-3">
       {alerts.map((alert) => (
-        <AlertCard key={alert.id} alert={alert} />
+        <AlertCard
+          key={alert.id}
+          productName={alert.product_name}
+          severity={alert.severity || alert.level || "LOW"}
+          message={alert.message || "No message available."}
+          reason={alert.reason}
+        />
       ))}
     </div>
   );

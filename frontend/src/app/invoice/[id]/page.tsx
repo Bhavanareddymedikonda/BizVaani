@@ -24,81 +24,63 @@ export default function InvoiceViewPage() {
   }, [invoiceId]);
 
   return (
-    <main className="min-h-screen bg-[#090616] px-4 py-8 text-white">
-      <div className="mx-auto max-w-md rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(39,25,79,0.92),rgba(18,16,44,0.96))] p-6 shadow-[0_24px_60px_rgba(6,4,22,0.65)]">
-        {error && <p className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">{error}</p>}
-        {!error && !invoice && <p className="text-sm text-[#c8b9ff]">Loading invoice...</p>}
+    <main className="min-h-screen px-4 py-6 md:px-8 lg:px-10">
+      <div className="mx-auto max-w-3xl">
+        {error ? <p className="surface-muted border-[rgba(198,92,77,0.22)] px-4 py-3 text-sm text-[var(--color-danger)]">{error}</p> : null}
+        {!error && !invoice ? <p className="surface px-5 py-5 text-sm text-[var(--color-text-soft)]">Loading invoice...</p> : null}
 
-        {invoice && (
-          <>
-            <div className="mb-6 text-center">
-              <h1 className="text-xl font-black tracking-wide text-white">{invoice.shop_name}</h1>
-              <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[#a78bfa]">GST Invoice</p>
+        {invoice ? (
+          <div className="surface-strong p-6 md:p-8">
+            <div className="mb-6 flex flex-col gap-4 border-b border-[var(--color-border)] pb-5 md:flex-row md:items-start md:justify-between">
+              <div>
+                <p className="eyebrow">Public invoice view</p>
+                <h1 className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-[var(--color-text)]">{invoice.shop_name}</h1>
+                <p className="mt-2 text-sm text-[var(--color-text-soft)]">Invoice {invoice.invoice_number} · {invoice.date}</p>
+              </div>
+              <a href={`${API_URL}${invoice.pdf_url}`} target="_blank" rel="noreferrer" className="btn-primary">
+                <Download size={16} />
+                Download PDF
+              </a>
             </div>
 
-            <div className="mb-4 flex justify-between text-sm text-[#c8b9ff]">
-              <span>Invoice: {invoice.invoice_number}</span>
-              <span>Date: {invoice.date}</span>
+            <div className="mb-6 surface-muted px-4 py-4">
+              <p className="eyebrow">Bill to</p>
+              <p className="mt-2 text-lg font-medium text-[var(--color-text)]">{invoice.customer_name}</p>
+              {invoice.customer_gstin ? <p className="mt-1 text-sm text-[var(--color-text-soft)]">GSTIN: {invoice.customer_gstin}</p> : null}
             </div>
 
-            <div className="mb-4 rounded-2xl border border-white/8 bg-white/5 p-4">
-              <p className="text-sm uppercase tracking-[0.18em] text-[#a78bfa]">Bill To</p>
-              <p className="font-semibold text-white">{invoice.customer_name}</p>
-              {invoice.customer_gstin && <p className="text-sm text-[#c8b9ff]">GSTIN: {invoice.customer_gstin}</p>}
-            </div>
-
-            <table className="mb-4 w-full text-sm">
-              <thead>
-                <tr className="border-b border-white/10">
-                  <th className="py-2 text-left font-medium uppercase tracking-[0.16em] text-[#a78bfa]">Item</th>
-                  <th className="py-2 text-right font-medium uppercase tracking-[0.16em] text-[#a78bfa]">Qty</th>
-                  <th className="py-2 text-right font-medium uppercase tracking-[0.16em] text-[#a78bfa]">Rate</th>
-                  <th className="py-2 text-right font-medium uppercase tracking-[0.16em] text-[#a78bfa]">Amount</th>
-                </tr>
-              </thead>
-              <tbody>
-                {invoice.items.map((item, index) => (
-                  <tr key={`${item.product}-${index}`} className="border-b border-white/6">
-                    <td className="py-3 text-white">{item.product}</td>
-                    <td className="py-3 text-right text-[#c8b9ff]">{item.qty}</td>
-                    <td className="py-3 text-right text-[#c8b9ff]">Rs.{item.unit_price}</td>
-                    <td className="py-3 text-right font-semibold text-white">
-                      Rs.{item.amount ?? Number(item.qty) * Number(item.unit_price)}
-                    </td>
+            <div className="table-shell overflow-x-auto">
+              <table className="min-w-full">
+                <thead>
+                  <tr className="table-head">
+                    <th className="table-cell">Item</th>
+                    <th className="table-cell">Qty</th>
+                    <th className="table-cell">Rate</th>
+                    <th className="table-cell">Amount</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-
-            <div className="space-y-1 border-t border-white/10 pt-3">
-              <div className="flex justify-between text-sm text-[#c8b9ff]">
-                <span>Subtotal</span>
-                <span>Rs.{invoice.subtotal}</span>
-              </div>
-              <div className="flex justify-between text-sm text-[#c8b9ff]">
-                <span>CGST</span>
-                <span>Rs.{invoice.cgst}</span>
-              </div>
-              <div className="flex justify-between text-sm text-[#c8b9ff]">
-                <span>SGST</span>
-                <span>Rs.{invoice.sgst}</span>
-              </div>
-              <div className="flex justify-between border-t border-white/10 pt-2 text-lg font-black text-white">
-                <span>Total</span>
-                <span>Rs.{invoice.total}</span>
-              </div>
+                </thead>
+                <tbody>
+                  {invoice.items.map((item, index) => (
+                    <tr key={`${item.product}-${index}`} className="table-row">
+                      <td className="table-cell font-medium text-[var(--color-text)]">{item.product}</td>
+                      <td className="table-cell text-[var(--color-text-soft)]">{item.qty}</td>
+                      <td className="table-cell text-[var(--color-text-soft)]">Rs.{item.unit_price}</td>
+                      <td className="table-cell font-medium text-[var(--color-text)]">Rs.{item.amount ?? Number(item.qty) * Number(item.unit_price)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
 
-            <a
-              href={`${API_URL}${invoice.pdf_url}`}
-              target="_blank"
-              rel="noreferrer"
-              className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-[#f97316] py-3 font-semibold text-white transition-colors hover:bg-[#ea580c]"
-            >
-              <Download size={16} /> Download PDF
-            </a>
-          </>
-        )}
+            <div className="mt-5 ml-auto max-w-sm space-y-2">
+              <div className="flex items-center justify-between text-sm text-[var(--color-text-soft)]"><span>Subtotal</span><span>Rs.{invoice.subtotal}</span></div>
+              <div className="flex items-center justify-between text-sm text-[var(--color-text-soft)]"><span>CGST</span><span>Rs.{invoice.cgst}</span></div>
+              <div className="flex items-center justify-between text-sm text-[var(--color-text-soft)]"><span>SGST</span><span>Rs.{invoice.sgst}</span></div>
+              <div className="divider my-3" />
+              <div className="flex items-center justify-between text-lg font-semibold text-[var(--color-text)]"><span>Total</span><span>Rs.{invoice.total}</span></div>
+            </div>
+          </div>
+        ) : null}
       </div>
     </main>
   );

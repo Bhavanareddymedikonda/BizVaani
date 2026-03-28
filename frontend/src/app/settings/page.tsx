@@ -1,20 +1,12 @@
 "use client";
 
-// ============================================================
-// Settings Page — Task: Member E
-// See: APP_FLOW.md (Flow 4 - CSV Post-Onboarding)
-// ============================================================
-
 import { useState } from "react";
-import { uploadCSV, confirmCSVImport } from "@/lib/api";
-import BottomNav from "@/components/BottomNav";
-import MicFAB from "@/components/MicFAB";
-import { Settings, UploadCloud, CheckCircle2 } from "lucide-react";
+import { AppShell, PageHeader, SectionHeader } from "@/components/AppShell";
+import { confirmCSVImport, uploadCSV } from "@/lib/api";
 
 export default function SettingsPage() {
   const [gstin, setGstin] = useState("");
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [csvPreview, setCsvPreview] = useState<any>(null);
+  const [csvPreview, setCsvPreview] = useState<Record<string, unknown> | null>(null);
   const [csvUploading, setCsvUploading] = useState(false);
   const [importDone, setImportDone] = useState(false);
 
@@ -25,7 +17,7 @@ export default function SettingsPage() {
     setCsvUploading(true);
     try {
       const preview = await uploadCSV(file);
-      setCsvPreview(preview);
+      setCsvPreview(preview as Record<string, unknown>);
     } catch (err) {
       console.error("CSV upload failed:", err);
     } finally {
@@ -36,7 +28,7 @@ export default function SettingsPage() {
   const handleConfirmImport = async () => {
     if (!csvPreview) return;
     try {
-      await confirmCSVImport("mock-file-id", csvPreview.detected_columns);
+      await confirmCSVImport("mock-file-id", (csvPreview.detected_columns as Record<string, string>) || {});
       setImportDone(true);
       setCsvPreview(null);
     } catch (err) {
@@ -44,112 +36,98 @@ export default function SettingsPage() {
     }
   };
 
+  const previewRows = (csvPreview?.preview_rows as Array<Record<string, string>>) || [];
+  const detectedColumns = (csvPreview?.detected_columns as Record<string, string>) || {};
+
   return (
-    <div className="min-h-screen selection:bg-[#c084fc] selection:text-white font-sans pb-24 md:pb-0 pt-20 md:pt-6">
-      <header className="px-4 md:px-12 py-6 mb-4 flex flex-col md:flex-row md:items-center justify-between md:ml-20">
-        <div>
-          <h1 className="text-3xl font-black tracking-wide text-white uppercase flex items-center gap-2">
-            <Settings className="text-[#c084fc]" size={28} /> Shop <span className="text-[#c084fc]">Settings</span>
-          </h1>
-        </div>
-      </header>
+    <AppShell topbar={<span className="status-badge status-info">Profile and data import</span>}>
+      <PageHeader
+        eyebrow="Settings"
+        title="Shop settings"
+        description="Maintain shop details, language, GST fields, and historical data import from one place."
+      />
 
-      <main className="px-4 md:px-12 max-w-4xl mx-auto md:ml-20 py-2 space-y-6">
-        {/* Shop Profile */}
-        <section className="advanced-card p-6">
-          <h2 className="text-sm font-black uppercase tracking-widest text-[#c084fc]/70 mb-4">Shop Profile</h2>
-          <div className="space-y-4 text-sm text-white/70 font-medium">
-            <div className="flex justify-between items-center bg-white/5 p-3 rounded-lg border border-white/5">
-              <span className="font-bold uppercase tracking-wider text-[10px] text-[#c084fc]/60">Name</span>
-              <span className="text-white">Ramesh Kirana Store</span>
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
+        <div className="space-y-6">
+          <section className="surface p-6">
+            <SectionHeader title="Shop profile" description="Current profile information shown across the workspace." />
+            <div className="grid gap-3 md:grid-cols-3">
+              <div className="surface-muted px-4 py-4">
+                <p className="eyebrow">Store name</p>
+                <p className="mt-2 text-base font-medium text-[var(--color-text)]">Ramesh Kirana Store</p>
+              </div>
+              <div className="surface-muted px-4 py-4">
+                <p className="eyebrow">City</p>
+                <p className="mt-2 text-base font-medium text-[var(--color-text)]">Nagpur</p>
+              </div>
+              <div className="surface-muted px-4 py-4">
+                <p className="eyebrow">Categories</p>
+                <p className="mt-2 text-base font-medium text-[var(--color-text)]">Grains, FMCG</p>
+              </div>
             </div>
-            <div className="flex justify-between items-center bg-white/5 p-3 rounded-lg border border-white/5">
-              <span className="font-bold uppercase tracking-wider text-[10px] text-[#c084fc]/60">City</span>
-              <span className="text-white">Nagpur</span>
-            </div>
-            <div className="flex justify-between items-center bg-white/5 p-3 rounded-lg border border-white/5">
-              <span className="font-bold uppercase tracking-wider text-[10px] text-[#c084fc]/60">Categories</span>
-              <span className="text-white">Grains, FMCG</span>
-            </div>
-          </div>
-        </section>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* GSTIN */}
-          <section className="advanced-card p-6">
-            <h2 className="text-sm font-black uppercase tracking-widest text-[#c084fc]/70 mb-4">GSTIN Configuration</h2>
-            <input
-              placeholder="Enter your GSTIN"
-              value={gstin}
-              onChange={(e) => setGstin(e.target.value)}
-              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-base font-bold text-white focus:outline-none focus:ring-2 focus:ring-[#c084fc]/40 uppercase"
-            />
           </section>
 
-          {/* Language */}
-          <section className="advanced-card p-6">
-            <h2 className="text-sm font-black uppercase tracking-widest text-[#c084fc]/70 mb-4">Language</h2>
-            <select className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-base font-bold text-white focus:outline-none focus:ring-2 focus:ring-[#c084fc]/40 appearance-none">
-              <option value="en" className="bg-[#0D0914]">English</option>
-              <option value="hi" className="bg-[#0D0914]">Hindi</option>
-              <option value="te" className="bg-[#0D0914]">Telugu</option>
+          <section className="surface p-6">
+            <SectionHeader title="Historical imports" description="Bring in old sales records for better forecast confidence." />
+
+            {importDone ? (
+              <div className="surface-muted border-[rgba(47,125,87,0.18)] px-4 py-4 text-sm text-[var(--color-success)]">
+                Records imported successfully. ML retraining has been triggered according to current backend behavior.
+              </div>
+            ) : csvPreview ? (
+              <div className="space-y-4">
+                <div className="status-badge status-info">{csvPreview.row_count as number} rows detected</div>
+                <div className="table-shell overflow-x-auto">
+                  <table className="min-w-full">
+                    <thead>
+                      <tr className="table-head">
+                        {Object.values(detectedColumns).map((col) => (
+                          <th key={col} className="table-cell">{col}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {previewRows.slice(0, 3).map((row, i) => (
+                        <tr key={i} className="table-row">
+                          <td className="table-cell text-[var(--color-text-soft)]">{row.date}</td>
+                          <td className="table-cell text-[var(--color-text-soft)]">{row.product}</td>
+                          <td className="table-cell text-[var(--color-text-soft)]">{row.qty}</td>
+                          <td className="table-cell text-[var(--color-text-soft)]">{row.price}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <button onClick={handleConfirmImport} className="btn-primary">
+                  Confirm data import
+                </button>
+              </div>
+            ) : (
+              <label className="surface-muted block cursor-pointer px-6 py-10 text-center">
+                <span className="block text-base font-medium text-[var(--color-text)]">{csvUploading ? "Uploading..." : "Select CSV or Excel file"}</span>
+                <span className="mt-2 block text-sm text-[var(--color-text-soft)]">Use your current import flow and preview the detected columns before confirming.</span>
+                <input type="file" accept=".csv,.xlsx,.xls" onChange={handleFileUpload} className="hidden" />
+              </label>
+            )}
+          </section>
+        </div>
+
+        <aside className="space-y-6">
+          <section className="surface p-6">
+            <SectionHeader title="GST configuration" description="Current frontend keeps this as a UI-only field." />
+            <input placeholder="Enter your GSTIN" value={gstin} onChange={(e) => setGstin(e.target.value)} className="field uppercase" />
+          </section>
+
+          <section className="surface p-6">
+            <SectionHeader title="Language" description="Set the operator language preference for the app." />
+            <select className="field">
+              <option value="en">English</option>
+              <option value="hi">Hindi</option>
+              <option value="te">Telugu</option>
             </select>
           </section>
-        </div>
-
-        {/* CSV Upload */}
-        <section className="advanced-card p-6">
-          <h2 className="text-sm font-black uppercase tracking-widest text-[#c084fc]/70 mb-2 flex items-center gap-2">
-            <UploadCloud size={20} /> Upload Old Records (CSV/Excel)
-          </h2>
-          <p className="text-xs font-bold text-white/50 mb-5 tracking-wide">
-            Import your historical sales data to get more accurate AI predictions.
-          </p>
-
-          {importDone ? (
-            <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4 text-sm font-bold text-green-400 flex items-center gap-2">
-              <CheckCircle2 size={18} /> Records imported successfully! ML model is retraining.
-            </div>
-          ) : csvPreview ? (
-            <div className="space-y-4">
-              <p className="text-xs font-bold uppercase tracking-widest text-[#c084fc] bg-[#c084fc]/10 w-max px-3 py-1 rounded-md border border-[#c084fc]/20">{csvPreview.row_count} rows detected</p>
-              <div className="overflow-x-auto rounded-xl bg-white/5 border border-white/10 p-2">
-                <table className="w-full text-xs text-left text-white">
-                  <thead className="text-[10px] uppercase font-black text-[#c084fc]/70">
-                    <tr>
-                      {Object.values(csvPreview.detected_columns as Record<string, string>).map((col: string) => (
-                        <th key={col} className="px-3 py-2 border-b border-white/10">{col}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                    {csvPreview.preview_rows.slice(0, 3).map((row: any, i: number) => (
-                      <tr key={i} className="border-b border-white/5 last:border-0 font-medium text-white/80">
-                        <td className="px-3 py-2">{row.date}</td>
-                        <td className="px-3 py-2">{row.product}</td>
-                        <td className="px-3 py-2">{row.qty}</td>
-                        <td className="px-3 py-2">{row.price}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <button onClick={handleConfirmImport} className="advanced-btn w-full py-3.5 mt-2">
-                Confirm Data Import
-              </button>
-            </div>
-          ) : (
-            <label className="block w-full py-10 border-2 border-dashed border-white/10 rounded-2xl text-center cursor-pointer hover:border-[#c084fc]/50 hover:bg-white/5 transition-all group">
-              <span className="text-white/50 font-bold uppercase tracking-widest group-hover:text-[#c084fc] block">{csvUploading ? "Uploading..." : "Click to select CSV/Excel file"}</span>
-              <input type="file" accept=".csv,.xlsx,.xls" onChange={handleFileUpload} className="hidden" />
-            </label>
-          )}
-        </section>
-      </main>
-
-      <MicFAB />
-      <BottomNav />
-    </div>
+        </aside>
+      </div>
+    </AppShell>
   );
 }

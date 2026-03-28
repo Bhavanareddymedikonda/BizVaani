@@ -1,4 +1,5 @@
 import { Minus, TrendingDown, TrendingUp } from "lucide-react";
+import { cn } from "@/lib/cn";
 
 interface ProductCardProps {
   name: string;
@@ -25,46 +26,60 @@ export default function ProductCard({
 }: ProductCardProps) {
   const isPositive = trendPct > 0;
   const isNeutral = trendPct === 0;
-
-  const riskColors = {
-    HIGH: "bg-red-500 shadow-[0_0_12px_rgba(239,68,68,0.8)]",
-    MEDIUM: "bg-yellow-400 shadow-[0_0_12px_rgba(250,204,21,0.8)]",
-    LOW: "bg-green-500 shadow-[0_0_12px_rgba(34,197,94,0.8)]",
-  };
-
-  const stockColors = {
-    CRITICAL: "text-red-300",
-    LOW_STOCK: "text-yellow-300",
-    IN_STOCK: "text-green-300",
-  };
+  const riskTone = riskLevel === "HIGH" ? "status-danger" : riskLevel === "MEDIUM" ? "status-warning" : "status-success";
+  const stockTone = stockStatus === "CRITICAL" ? "text-[var(--color-danger)]" : stockStatus === "LOW_STOCK" ? "text-[var(--color-warning)]" : "text-[var(--color-success)]";
 
   return (
-    <div className="advanced-card advanced-card-hover group flex min-w-0 cursor-pointer flex-col justify-between overflow-hidden p-5">
-      <div className="mb-2 flex min-w-0 items-start justify-between gap-3">
-        <h3 className="min-w-0 break-words text-lg font-extrabold uppercase tracking-wider text-white">{name}</h3>
-        <div className="flex items-center gap-2">
-          <div className={`h-3.5 w-3.5 rounded-full border border-white/40 ${riskColors[riskLevel]}`} title={`Risk: ${riskLevel}`} />
+    <article className="surface group flex min-w-0 flex-col justify-between p-5 transition-transform duration-200 hover:-translate-y-1">
+      <div className="mb-6 flex min-w-0 items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--color-text-muted)]">Product</p>
+          <h3 className="mt-1 break-words text-xl font-semibold tracking-[-0.03em] text-[var(--color-text)]">{name}</h3>
+        </div>
+        <span className={cn("status-badge", riskTone)}>{riskLevel} risk</span>
+      </div>
+
+      <div className="min-w-0">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--color-text-muted)]">Today revenue</p>
+        <p className="mt-2 overflow-hidden text-[clamp(2rem,3vw,3.25rem)] font-semibold leading-none tracking-[-0.05em] text-[var(--color-text)]">
+          Rs.{todayRevenue.toLocaleString("en-IN")}
+        </p>
+        <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+          <div className="surface-muted px-3 py-3">
+            <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--color-text-muted)]">Sold</p>
+            <p className="mt-1 font-semibold text-[var(--color-text)]">
+              {todayQty} {unit}
+            </p>
+          </div>
+          <div className="surface-muted px-3 py-3">
+            <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--color-text-muted)]">Mandi</p>
+            <p className="mt-1 font-semibold text-[var(--color-text)]">Rs.{mandiPrice}</p>
+          </div>
         </div>
       </div>
 
-      <div className="my-3 min-w-0">
-        <p className="overflow-hidden text-[clamp(2.2rem,3vw,3.8rem)] font-black leading-none tracking-[-0.05em] text-[#c084fc] drop-shadow-[0_0_12px_rgba(192,132,252,0.3)]">
-          Rs.{todayRevenue.toLocaleString()}
-        </p>
-        <p className="mt-3 border-t border-white/10 pt-3 text-sm font-medium leading-6 text-[#c084fc]/60">
-          Qty: <span className="font-bold text-white/90">{todayQty}</span> | Mandi: <span className="font-bold text-white/90">Rs.{mandiPrice}</span>
-        </p>
-        <p className="mt-2 break-words text-xs font-bold uppercase tracking-[0.2em] text-white/60">
-          Stock: <span className={stockColors[stockStatus]}>{stockQty} {unit}</span>
-        </p>
-      </div>
-
-      <div className="mt-2">
-        <div className={`inline-flex items-center rounded-xl border px-3 py-1.5 text-[10px] font-bold uppercase sm:text-xs ${isPositive ? "border-green-500/20 bg-green-500/10 text-green-400" : isNeutral ? "border-white/10 bg-white/5 text-white/50" : "border-red-500/20 bg-red-500/10 text-red-400"}`}>
-          {isPositive ? <TrendingUp size={16} className="mr-1.5" /> : isNeutral ? <Minus size={16} className="mr-1.5" /> : <TrendingDown size={16} className="mr-1.5" />}
-          {Math.abs(trendPct)}% vs 7D Avg
+      <div className="mt-5 flex items-end justify-between gap-4 border-t border-[var(--color-border)] pt-4">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-text-muted)]">Stock status</p>
+          <p className={cn("mt-1 text-sm font-semibold", stockTone)}>
+            {stockQty} {unit} · {stockStatus.replace("_", " ").toLowerCase()}
+          </p>
+        </div>
+        <div
+          className={cn(
+            "inline-flex items-center rounded-full px-3 py-1.5 text-xs font-semibold",
+            isPositive
+              ? "bg-[rgba(47,125,87,0.12)] text-[var(--color-success)]"
+              : isNeutral
+                ? "bg-[rgba(15,23,42,0.06)] text-[var(--color-text-soft)]"
+                : "bg-[rgba(198,92,77,0.12)] text-[var(--color-danger)]",
+          )}
+        >
+          {isPositive ? <TrendingUp size={14} className="mr-1.5" /> : isNeutral ? <Minus size={14} className="mr-1.5" /> : <TrendingDown size={14} className="mr-1.5" />}
+          {Math.abs(trendPct)}% vs 7d
         </div>
       </div>
-    </div>
+    </article>
   );
 }
+

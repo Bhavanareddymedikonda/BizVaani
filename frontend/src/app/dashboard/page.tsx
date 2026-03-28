@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { MessageSquareMore, RefreshCw } from "lucide-react";
+import { AppShell, PageHeader, SectionHeader, StatCard } from "@/components/AppShell";
+import ProductCard from "@/components/ProductCard";
+import AlertCard from "@/components/AlertCard";
 import { getDashboard } from "../../lib/api";
-import ProductCard from "../../components/ProductCard";
-import AlertCard from "../../components/AlertCard";
-import BottomNav from "../../components/BottomNav";
-import MicFAB from "../../components/MicFAB";
 
 type DashboardData = {
   user?: { name?: string };
@@ -61,14 +61,9 @@ export default function DashboardPage() {
 
     void loadDashboard();
 
-    const refresh = () => {
-      void loadDashboard();
-    };
-
+    const refresh = () => void loadDashboard();
     const onStorage = (event: StorageEvent) => {
-      if (event.key === "bv_dashboard_refresh") {
-        void loadDashboard();
-      }
+      if (event.key === "bv_dashboard_refresh") void loadDashboard();
     };
 
     window.addEventListener("focus", refresh);
@@ -82,140 +77,109 @@ export default function DashboardPage() {
     };
   }, []);
 
+  const actions = (
+    <>
+      <button type="button" className="btn-secondary" onClick={() => window.dispatchEvent(new CustomEvent("bv-open-voice"))}>
+        <MessageSquareMore size={16} />
+        Ask BizVaani
+      </button>
+      <button type="button" className="btn-ghost" onClick={handleLogout}>
+        Logout
+      </button>
+    </>
+  );
+
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center pb-24 pt-20 font-sans selection:bg-[#c084fc] selection:text-white md:pb-0 md:pt-6">
-        <div className="h-12 w-12 animate-spin rounded-full border-4 border-[#c084fc]/30 border-t-[#c084fc]" />
-      </div>
+      <AppShell>
+        <div className="app-grid md:grid-cols-2 xl:grid-cols-4">
+          {[1, 2, 3, 4].map((item) => (
+            <div key={item} className="metric-card h-40 animate-pulse" />
+          ))}
+        </div>
+      </AppShell>
     );
   }
 
   if (!dashboard) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center pb-24 pt-20 font-sans selection:bg-[#c084fc] selection:text-white md:pb-0 md:pt-6">
-        <p className="mb-4 text-[#f87171]">Error loading dashboard data.</p>
-        <button onClick={() => window.location.reload()} className="advanced-btn px-6 py-2">Retry</button>
-      </div>
+      <AppShell>
+        <div className="empty-state">
+          <p className="text-lg font-semibold text-[var(--color-text)]">Unable to load dashboard</p>
+          <p className="mt-2 text-sm text-[var(--color-text-soft)]">The data request failed. Refresh and try again.</p>
+          <button type="button" className="btn-primary mt-5" onClick={() => window.location.reload()}>
+            <RefreshCw size={16} />
+            Retry
+          </button>
+        </div>
+      </AppShell>
     );
   }
 
-  const highOrMediumAlerts =
-    dashboard.alerts?.filter(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (a: any) => a.severity === "HIGH" || a.severity === "MEDIUM",
-    ) || [];
-
-  const revenueValue = dashboard.total_today?.revenue?.toLocaleString() || "0";
-  const profitValue = dashboard.total_today?.profit_estimate?.toLocaleString() || "0";
-  const inventoryValue = dashboard.stock_summary?.inventory_value?.toLocaleString() || "0";
+  const highOrMediumAlerts = dashboard.alerts?.filter((alert) => alert.severity !== "LOW") || [];
+  const revenueValue = `Rs.${(dashboard.total_today?.revenue || 0).toLocaleString("en-IN")}`;
+  const profitValue = `Rs.${(dashboard.total_today?.profit_estimate || 0).toLocaleString("en-IN")}`;
+  const inventoryValue = `Rs.${(dashboard.stock_summary?.inventory_value || 0).toLocaleString("en-IN")}`;
 
   return (
-    <div className="min-h-screen pb-24 pt-20 font-sans selection:bg-[#c084fc] selection:text-white md:pb-0 md:pt-6">
-      <header className="mb-4 flex flex-col justify-between px-4 py-6 md:flex-row md:items-center md:px-12">
-        <div>
-          <h1 className="text-3xl font-black tracking-wide text-white">
-            Good morning, <span className="text-[#c084fc]">{dashboard.user?.name || "Ramesh"}</span>
-          </h1>
-          <p className="mt-1 text-xs font-bold uppercase tracking-widest text-[#c084fc]/60">
-            {dashboard.shop?.shop_name || "Ramesh Kirana Store"} | {dashboard.shop?.city || "Nagpur"}
-          </p>
-        </div>
-        <button
-          onClick={handleLogout}
-          className="mt-4 inline-flex items-center rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-black uppercase tracking-[0.2em] text-white/80 transition-colors hover:border-red-400/30 hover:bg-red-500/10 hover:text-red-200 md:mt-0"
-        >
-          Logout
-        </button>
-      </header>
+    <AppShell topbar={<span className="status-badge status-info">{dashboard.shop?.shop_name || "Retail workspace"}</span>}>
+      <PageHeader
+        eyebrow="Daily overview"
+        title={`Good morning, ${dashboard.user?.name || "Ramesh"}`}
+        description={`${dashboard.shop?.shop_name || "Your store"} in ${dashboard.shop?.city || "Nagpur"} with live revenue, stock, and risk context.`}
+        actions={actions}
+      />
 
-      <main className="mx-auto max-w-7xl px-4 md:px-12">
-        <section className="mb-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-6 md:gap-6">
-          <div className="advanced-card col-span-1 min-w-0 overflow-hidden !border-none !bg-gradient-to-br !from-[#9333ea] !to-[#4c1d95] p-5 text-white shadow-[0_8px_32px_rgba(147,51,234,0.4)] sm:col-span-2 lg:col-span-2 md:p-6">
-            <h2 className="mb-1 text-[11px] font-bold uppercase tracking-[0.18em] text-[#e9d5ff] opacity-90">Total Revenue Today</h2>
-            <div className="mt-3 flex min-w-0 items-end gap-1 overflow-hidden text-white drop-shadow-md">
-              <span className="shrink-0 text-[clamp(1.2rem,1.5vw,1.8rem)] font-black leading-none tracking-[-0.05em]">Rs.</span>
-              <span className="min-w-0 truncate text-[clamp(1.7rem,2.2vw,2.9rem)] font-black leading-none tracking-[-0.06em]">
-                {revenueValue}
-              </span>
-            </div>
-          </div>
+      <section className="app-grid md:grid-cols-2 xl:grid-cols-4">
+        <StatCard label="Revenue today" value={revenueValue} hint="Gross revenue recorded across current activity." />
+        <StatCard label="Items sold" value={`${dashboard.total_today?.items_sold || 0}`} hint="Units sold today from sales and invoice entries." tone="accent" />
+        <StatCard label="Estimated profit" value={profitValue} hint="Derived from current selling and cost prices." tone="success" />
+        <StatCard label="Inventory value" value={inventoryValue} hint={`${dashboard.stock_summary?.low_stock_count || 0} low stock SKU flagged.`} tone="warning" />
+      </section>
 
-          <div className="advanced-card min-w-0 overflow-hidden p-5 lg:col-span-1 md:p-6">
-            <h2 className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-[#c084fc]/70">Items Sold</h2>
-            <div className="overflow-hidden text-[clamp(1.8rem,2.3vw,2.8rem)] font-black leading-none text-[#f3e8ff] drop-shadow-[0_0_12px_rgba(255,255,255,0.3)]">
-              {dashboard.total_today?.items_sold || 0}
-            </div>
-          </div>
+      <section className="mt-10">
+        <SectionHeader
+          title="Risk summary"
+          description="Priority alerts from inventory pressure and sales trend shifts."
+          action={<span className="status-badge status-warning">{highOrMediumAlerts.length} open</span>}
+        />
 
-          <div className="advanced-card min-w-0 overflow-hidden p-5 lg:col-span-1 md:p-6">
-            <h2 className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-[#c084fc]/70">Est. Profit</h2>
-            <div className="mt-3 flex min-w-0 items-end gap-1 overflow-hidden text-[#4ade80] drop-shadow-[0_0_12px_rgba(74,222,128,0.4)]">
-              <span className="shrink-0 text-[clamp(1.1rem,1.4vw,1.6rem)] font-black leading-none tracking-[-0.05em]">Rs.</span>
-              <span className="min-w-0 truncate text-[clamp(1.7rem,2.2vw,2.4rem)] font-black leading-none tracking-[-0.06em]">
-                {profitValue}
-              </span>
-            </div>
-          </div>
-
-          <div className="advanced-card min-w-0 overflow-hidden p-5 lg:col-span-1 md:p-6">
-            <h2 className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-[#c084fc]/70">Low Stock SKU</h2>
-            <div className="overflow-hidden text-[clamp(1.8rem,2.2vw,2.6rem)] font-black leading-none text-[#fbbf24]">
-              {dashboard.stock_summary?.low_stock_count || 0}
-            </div>
-          </div>
-
-          <div className="advanced-card min-w-0 overflow-hidden p-5 lg:col-span-1 md:p-6">
-            <h2 className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-[#c084fc]/70">Inventory Value</h2>
-            <div className="mt-3 flex min-w-0 items-end gap-1 overflow-hidden text-[#60a5fa]">
-              <span className="shrink-0 text-[clamp(1.1rem,1.4vw,1.6rem)] font-black leading-none tracking-[-0.05em]">Rs.</span>
-              <span className="min-w-0 truncate text-[clamp(1.7rem,2.2vw,2.4rem)] font-black leading-none tracking-[-0.06em]">
-                {inventoryValue}
-              </span>
-            </div>
-          </div>
-        </section>
-
-        {highOrMediumAlerts.length > 0 && (
-          <section className="mb-10">
-            <div className="mb-6 flex w-max items-center gap-3 rounded-full border border-red-500/20 bg-red-500/10 px-4 py-2.5 text-red-500 backdrop-blur-md">
-              <div className="h-3 w-3 animate-pulse rounded-full bg-red-500 shadow-[0_0_12px_rgba(239,68,68,0.8)]" />
-              <h2 className="text-xs font-black uppercase tracking-widest">Action Required</h2>
-            </div>
-            <div className="grid grid-cols-1 gap-5 md:grid-cols-2 md:gap-6">
-              {highOrMediumAlerts.map((alert) => (
-                <AlertCard key={alert.id} productName={alert.product_name} severity={alert.severity} message={alert.message} />
-              ))}
-            </div>
-          </section>
-        )}
-
-        <section className="mb-10">
-          <div className="mb-6 flex justify-between items-end">
-            <h2 className="rounded-xl border border-[#c084fc]/20 bg-[#c084fc]/10 px-4 py-2 text-sm font-black uppercase tracking-widest text-[#c084fc]/80 backdrop-blur-sm">
-              Top Products
-            </h2>
-          </div>
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 md:gap-6">
-            {dashboard.top_products?.map((product) => (
-              <ProductCard
-                key={product.id}
-                name={product.name}
-                todayQty={product.today_qty}
-                todayRevenue={product.today_revenue}
-                stockQty={product.stock_qty}
-                stockStatus={product.stock_status}
-                unit={product.unit}
-                trendPct={product.trend_pct}
-                mandiPrice={product.mandi_price}
-                riskLevel={product.risk_level}
-              />
+        {highOrMediumAlerts.length ? (
+          <div className="app-grid md:grid-cols-2">
+            {highOrMediumAlerts.map((alert) => (
+              <AlertCard key={alert.id} productName={alert.product_name} severity={alert.severity} message={alert.message} />
             ))}
           </div>
-        </section>
-      </main>
+        ) : (
+          <div className="empty-state">
+            <p className="text-lg font-semibold text-[var(--color-text)]">No urgent alerts</p>
+            <p className="mt-2 text-sm text-[var(--color-text-soft)]">Current inventory and sales patterns look stable.</p>
+          </div>
+        )}
+      </section>
 
-      <MicFAB />
-      <BottomNav />
-    </div>
+      <section className="mt-10">
+        <SectionHeader
+          title="Product performance"
+          description="Top products ordered by today’s revenue with mandi and stock context."
+        />
+        <div className="app-grid md:grid-cols-2 2xl:grid-cols-3">
+          {dashboard.top_products?.map((product) => (
+            <ProductCard
+              key={product.id}
+              name={product.name}
+              todayQty={product.today_qty}
+              todayRevenue={product.today_revenue}
+              stockQty={product.stock_qty}
+              stockStatus={product.stock_status}
+              unit={product.unit}
+              trendPct={product.trend_pct}
+              mandiPrice={product.mandi_price}
+              riskLevel={product.risk_level}
+            />
+          ))}
+        </div>
+      </section>
+    </AppShell>
   );
 }

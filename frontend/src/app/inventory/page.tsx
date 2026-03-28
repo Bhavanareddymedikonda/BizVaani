@@ -1,10 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AlertTriangle, CheckCircle2, History, PackagePlus, PlusSquare } from "lucide-react";
-import BottomNav from "@/components/BottomNav";
+import { ClipboardList, PackagePlus, PlusSquare } from "lucide-react";
+import { AppShell, PageHeader, SectionHeader, StatCard } from "@/components/AppShell";
 import InventoryCard from "@/components/InventoryCard";
-import MicFAB from "@/components/MicFAB";
 import {
   adjustInventory,
   createProduct,
@@ -39,10 +38,7 @@ export default function InventoryPage() {
   async function loadData() {
     setLoading(true);
     try {
-      const [inventoryData, transactionData] = await Promise.all([
-        getInventory(),
-        getInventoryTransactions({ limit: 12 }),
-      ]);
+      const [inventoryData, transactionData] = await Promise.all([getInventory(), getInventoryTransactions({ limit: 12 })]);
       setInventory(inventoryData);
       setTransactions(transactionData);
       setError(null);
@@ -122,36 +118,35 @@ export default function InventoryPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0d1024] pb-24 font-sans text-white selection:bg-[#00d4ff] selection:text-black md:pb-0">
-      <header className="sticky top-0 z-30 border-b border-white/8 bg-[#0d1024]/80 px-4 py-6 backdrop-blur-md md:px-8">
-        <h1 className="text-2xl font-black uppercase tracking-wide text-white">
-          Inventory <span className="text-[#00d4ff]">Ledger</span>
-        </h1>
-        <p className="mt-1 text-xs font-bold uppercase tracking-[0.22em] text-[#8ea3d8]">
-          Live stock balances, transaction history, stock updates, and new products
-        </p>
-      </header>
+    <AppShell topbar={<span className="status-badge status-info">{inventory.length} products tracked</span>}>
+      <PageHeader
+        eyebrow="Inventory control"
+        title="Inventory"
+        description="Monitor stock health, post manual adjustments, and add new products without leaving the workspace."
+      />
 
-      <main className="mx-auto grid max-w-7xl gap-8 px-4 py-6 md:px-8 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <section>
-          {error && (
-            <div className="mb-5 rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-100">
-              {error}
-            </div>
-          )}
+      <section className="app-grid md:grid-cols-3">
+        <StatCard label="Tracked products" value={`${inventory.length}`} hint="Current product count across the catalog." />
+        <StatCard label="Needs attention" value={`${criticalItems.length + lowItems.length}`} hint="Critical and low stock products." tone="warning" />
+        <StatCard label="Recent movements" value={`${transactions.length}`} hint="Last 12 logged stock transactions." tone="accent" />
+      </section>
 
+      {error ? <div className="surface mt-6 border-[rgba(198,92,77,0.22)] p-4 text-sm text-[var(--color-danger)]">{error}</div> : null}
+
+      <section className="mt-10 grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="space-y-10">
           {loading ? (
-            <div className="rounded-[28px] border border-white/8 bg-white/5 px-6 py-10 text-sm text-white/70">
-              Loading inventory...
+            <div className="app-grid md:grid-cols-2">
+              {[1, 2, 3, 4].map((item) => (
+                <div key={item} className="surface h-52 animate-pulse" />
+              ))}
             </div>
           ) : (
             <>
               {(criticalItems.length > 0 || lowItems.length > 0) && (
-                <section className="mb-10">
-                  <h2 className="mb-4 flex w-max items-center gap-2 rounded-full border border-red-400/15 bg-red-500/10 px-3 py-1.5 text-xs font-black uppercase tracking-[0.24em] text-red-200">
-                    <AlertTriangle size={16} /> Needs Attention
-                  </h2>
-                  <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
+                <section>
+                  <SectionHeader title="Needs attention" description="Products that are running below healthy stock thresholds." />
+                  <div className="app-grid md:grid-cols-2">
                     {[...criticalItems, ...lowItems].map((item) => (
                       <InventoryCard key={item.id} item={item} onUpdate={setSelected} />
                     ))}
@@ -160,10 +155,8 @@ export default function InventoryPage() {
               )}
 
               <section>
-                <h2 className="mb-4 flex items-center gap-2 text-xs font-black uppercase tracking-[0.24em] text-[#8ea3d8]">
-                  <CheckCircle2 size={16} className="text-green-400" /> Stable Stock
-                </h2>
-                <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
+                <SectionHeader title="Healthy stock" description="Products currently above their low-stock thresholds." />
+                <div className="app-grid md:grid-cols-2">
                   {inStockItems.map((item) => (
                     <InventoryCard key={item.id} item={item} onUpdate={setSelected} />
                   ))}
@@ -171,168 +164,97 @@ export default function InventoryPage() {
               </section>
             </>
           )}
-        </section>
+        </div>
 
-        <aside className="grid gap-6">
-          <section className="rounded-[28px] border border-white/8 bg-white/5 p-5 backdrop-blur-md">
+        <aside className="space-y-6">
+          <section className="surface p-5">
             <div className="mb-4 flex items-center gap-2">
-              <PackagePlus size={18} className="text-[#00d4ff]" />
-              <h2 className="text-sm font-black uppercase tracking-[0.24em] text-[#cdd8ff]">Update Stock</h2>
+              <PackagePlus size={18} className="text-[var(--color-accent)]" />
+              <h2 className="text-lg font-semibold tracking-[-0.03em] text-[var(--color-text)]">Update stock</h2>
             </div>
 
             {selected ? (
-              <div className="grid gap-3">
-                <div className="rounded-2xl border border-white/8 bg-[#111632] px-4 py-3">
-                  <p className="text-xs uppercase tracking-[0.2em] text-[#8ea3d8]">Selected Product</p>
-                  <p className="mt-1 text-lg font-bold text-white">{selected.name}</p>
-                  <p className="text-sm text-white/65">
-                    Current: {selected.in_stock} {selected.unit}
+              <div className="space-y-4">
+                <div className="surface-muted px-4 py-4">
+                  <p className="eyebrow">Selected product</p>
+                  <p className="mt-2 text-lg font-semibold text-[var(--color-text)]">{selected.name}</p>
+                  <p className="mt-1 text-sm text-[var(--color-text-soft)]">
+                    Current balance: {selected.in_stock} {selected.unit}
                   </p>
                 </div>
 
                 <div className="flex gap-2">
-                  <button
-                    onClick={() => setAdjustmentType("restock")}
-                    className="flex-1 rounded-full px-4 py-2 text-xs font-bold uppercase tracking-[0.2em]"
-                    style={{
-                      background: adjustmentType === "restock" ? "rgba(0,212,255,0.16)" : "rgba(255,255,255,0.04)",
-                      border: adjustmentType === "restock" ? "1px solid rgba(0,212,255,0.28)" : "1px solid rgba(255,255,255,0.08)",
-                    }}
-                  >
+                  <button type="button" onClick={() => setAdjustmentType("restock")} className={adjustmentType === "restock" ? "btn-primary flex-1" : "btn-secondary flex-1"}>
                     Restock
                   </button>
-                  <button
-                    onClick={() => setAdjustmentType("manual_adjustment")}
-                    className="flex-1 rounded-full px-4 py-2 text-xs font-bold uppercase tracking-[0.2em]"
-                    style={{
-                      background: adjustmentType === "manual_adjustment" ? "rgba(255,165,0,0.16)" : "rgba(255,255,255,0.04)",
-                      border: adjustmentType === "manual_adjustment" ? "1px solid rgba(255,165,0,0.28)" : "1px solid rgba(255,255,255,0.08)",
-                    }}
-                  >
+                  <button type="button" onClick={() => setAdjustmentType("manual_adjustment")} className={adjustmentType === "manual_adjustment" ? "btn-primary flex-1" : "btn-secondary flex-1"}>
                     Reduce
                   </button>
                 </div>
 
-                <input
-                  value={quantityDelta}
-                  onChange={(event) => setQuantityDelta(event.target.value)}
-                  placeholder={`Quantity in ${selected.unit}`}
-                  className="rounded-2xl border border-white/8 bg-[#111632] px-4 py-3 text-sm text-white outline-none placeholder:text-white/35"
-                />
-                <textarea
-                  value={notes}
-                  onChange={(event) => setNotes(event.target.value)}
-                  placeholder="Notes for transaction history"
-                  rows={3}
-                  className="rounded-2xl border border-white/8 bg-[#111632] px-4 py-3 text-sm text-white outline-none placeholder:text-white/35"
-                />
+                <input value={quantityDelta} onChange={(event) => setQuantityDelta(event.target.value)} placeholder={`Quantity in ${selected.unit}`} className="field" />
+                <textarea value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Notes for transaction history" rows={3} className="field min-h-24 resize-none" />
 
-                <button
-                  onClick={() => void handleSubmitAdjustment()}
-                  disabled={submittingAdjustment}
-                  className="rounded-2xl px-4 py-3 text-sm font-bold text-white disabled:opacity-50"
-                  style={{ background: "linear-gradient(135deg, rgba(0,212,255,0.95), rgba(109,40,217,0.95))" }}
-                >
-                  {submittingAdjustment ? "Saving..." : "Save Inventory Update"}
+                <button type="button" onClick={() => void handleSubmitAdjustment()} disabled={submittingAdjustment} className="btn-primary w-full disabled:opacity-60">
+                  {submittingAdjustment ? "Saving..." : "Save inventory update"}
                 </button>
               </div>
             ) : (
-              <p className="text-sm leading-6 text-white/68">
-                Select any product card to post a restock or reduction. Every change writes a stock transaction and updates the current balance.
-              </p>
+              <p className="text-sm leading-6 text-[var(--color-text-soft)]">Choose any product card to post a restock or reduction. Every change writes a stock transaction and updates the current balance.</p>
             )}
           </section>
 
-          <section className="rounded-[28px] border border-white/8 bg-white/5 p-5 backdrop-blur-md">
+          <section className="surface p-5">
             <div className="mb-4 flex items-center gap-2">
-              <PlusSquare size={18} className="text-[#00d4ff]" />
-              <h2 className="text-sm font-black uppercase tracking-[0.24em] text-[#cdd8ff]">Add New Product</h2>
+              <PlusSquare size={18} className="text-[var(--color-accent)]" />
+              <h2 className="text-lg font-semibold tracking-[-0.03em] text-[var(--color-text)]">Add new product</h2>
             </div>
-
-            <div className="grid gap-3">
-              <input
-                value={newProduct.name}
-                onChange={(event) => setNewProduct((current) => ({ ...current, name: event.target.value }))}
-                placeholder="Product name"
-                className="rounded-2xl border border-white/8 bg-[#111632] px-4 py-3 text-sm text-white outline-none placeholder:text-white/35"
-              />
-              <input
-                value={newProduct.category}
-                onChange={(event) => setNewProduct((current) => ({ ...current, category: event.target.value }))}
-                placeholder="Category"
-                className="rounded-2xl border border-white/8 bg-[#111632] px-4 py-3 text-sm text-white outline-none placeholder:text-white/35"
-              />
+            <div className="space-y-3">
+              <input value={newProduct.name} onChange={(event) => setNewProduct((current) => ({ ...current, name: event.target.value }))} placeholder="Product name" className="field" />
+              <input value={newProduct.category} onChange={(event) => setNewProduct((current) => ({ ...current, category: event.target.value }))} placeholder="Category" className="field" />
               <div className="grid grid-cols-2 gap-3">
-                <input
-                  value={newProduct.unit}
-                  onChange={(event) => setNewProduct((current) => ({ ...current, unit: event.target.value }))}
-                  placeholder="Unit"
-                  className="rounded-2xl border border-white/8 bg-[#111632] px-4 py-3 text-sm text-white outline-none placeholder:text-white/35"
-                />
-                <input
-                  value={newProduct.stock_qty}
-                  onChange={(event) => setNewProduct((current) => ({ ...current, stock_qty: event.target.value }))}
-                  placeholder="Opening stock"
-                  className="rounded-2xl border border-white/8 bg-[#111632] px-4 py-3 text-sm text-white outline-none placeholder:text-white/35"
-                />
+                <input value={newProduct.unit} onChange={(event) => setNewProduct((current) => ({ ...current, unit: event.target.value }))} placeholder="Unit" className="field" />
+                <input value={newProduct.stock_qty} onChange={(event) => setNewProduct((current) => ({ ...current, stock_qty: event.target.value }))} placeholder="Opening stock" className="field" />
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <input
-                  value={newProduct.selling_price}
-                  onChange={(event) => setNewProduct((current) => ({ ...current, selling_price: event.target.value }))}
-                  placeholder="Selling price"
-                  className="rounded-2xl border border-white/8 bg-[#111632] px-4 py-3 text-sm text-white outline-none placeholder:text-white/35"
-                />
-                <input
-                  value={newProduct.cost_price}
-                  onChange={(event) => setNewProduct((current) => ({ ...current, cost_price: event.target.value }))}
-                  placeholder="Cost price"
-                  className="rounded-2xl border border-white/8 bg-[#111632] px-4 py-3 text-sm text-white outline-none placeholder:text-white/35"
-                />
+                <input value={newProduct.selling_price} onChange={(event) => setNewProduct((current) => ({ ...current, selling_price: event.target.value }))} placeholder="Selling price" className="field" />
+                <input value={newProduct.cost_price} onChange={(event) => setNewProduct((current) => ({ ...current, cost_price: event.target.value }))} placeholder="Cost price" className="field" />
               </div>
-
-              <button
-                onClick={() => void handleCreateProduct()}
-                disabled={submittingProduct}
-                className="rounded-2xl px-4 py-3 text-sm font-bold text-white disabled:opacity-50"
-                style={{ background: "linear-gradient(135deg, rgba(34,197,94,0.95), rgba(0,212,255,0.95))" }}
-              >
-                {submittingProduct ? "Creating..." : "Create Product"}
+              <button type="button" onClick={() => void handleCreateProduct()} disabled={submittingProduct} className="btn-primary w-full disabled:opacity-60">
+                {submittingProduct ? "Creating..." : "Create product"}
               </button>
             </div>
           </section>
 
-          <section className="rounded-[28px] border border-white/8 bg-white/5 p-5 backdrop-blur-md">
+          <section className="surface p-5">
             <div className="mb-4 flex items-center gap-2">
-              <History size={18} className="text-[#00d4ff]" />
-              <h2 className="text-sm font-black uppercase tracking-[0.24em] text-[#cdd8ff]">Recent Transactions</h2>
+              <ClipboardList size={18} className="text-[var(--color-accent)]" />
+              <h2 className="text-lg font-semibold tracking-[-0.03em] text-[var(--color-text)]">Recent transactions</h2>
             </div>
-            <div className="grid gap-3">
+            <div className="space-y-3">
               {transactions.map((tx) => (
-                <div key={tx.id} className="rounded-2xl border border-white/8 bg-[#111632] px-4 py-3 text-sm">
+                <div key={tx.id} className="surface-muted px-4 py-3">
                   <div className="flex items-center justify-between gap-3">
                     <div>
-                      <p className="font-semibold text-white">{tx.product_name}</p>
-                      <p className="text-xs uppercase tracking-[0.2em] text-[#8ea3d8]">{tx.transaction_type}</p>
+                      <p className="font-medium text-[var(--color-text)]">{tx.product_name}</p>
+                      <p className="mt-1 text-xs uppercase tracking-[0.18em] text-[var(--color-text-muted)]">{tx.transaction_type.replace(/_/g, " ")}</p>
                     </div>
                     <div className="text-right">
-                      <p className={`font-bold ${tx.quantity_delta >= 0 ? "text-green-300" : "text-red-300"}`}>
+                      <p className={`font-semibold ${tx.quantity_delta >= 0 ? "text-[var(--color-success)]" : "text-[var(--color-danger)]"}`}>
                         {tx.quantity_delta >= 0 ? "+" : ""}
                         {tx.quantity_delta} {tx.unit}
                       </p>
-                      <p className="text-xs text-white/55">Balance {tx.balance_after}</p>
+                      <p className="mt-1 text-xs text-[var(--color-text-soft)]">Balance {tx.balance_after}</p>
                     </div>
                   </div>
-                  {tx.notes && <p className="mt-2 text-xs text-white/60">{tx.notes}</p>}
+                  {tx.notes ? <p className="mt-2 text-sm text-[var(--color-text-soft)]">{tx.notes}</p> : null}
                 </div>
               ))}
             </div>
           </section>
         </aside>
-      </main>
-
-      <MicFAB />
-      <BottomNav />
-    </div>
+      </section>
+    </AppShell>
   );
 }
+

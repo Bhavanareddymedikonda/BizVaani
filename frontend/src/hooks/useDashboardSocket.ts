@@ -1,26 +1,17 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useRef } from "react";
 import { useShopStore } from "@/store/useShopStore";
 
 const WS_BASE = process.env.NEXT_PUBLIC_API_URL?.replace(/^http/, "ws") ?? "ws://localhost:8000";
 
-/**
- * useDashboardSocket
- *
- * Maintains a persistent WebSocket connection to /ws/dashboard/{shop_id}.
- * Receives server-pushed alert and forecast updates and writes them to
- * the Zustand shop store so the dashboard re-renders automatically.
- *
- * Automatically reconnects on disconnect (max 5 retries with back-off).
- */
 export function useDashboardSocket(shopId: number | null) {
   const { addAlert, setProducts } = useShopStore();
 
-  const wsRef      = useRef<WebSocket | null>(null);
-  const retryRef   = useRef(0);
+  const wsRef = useRef<WebSocket | null>(null);
+  const retryRef = useRef(0);
   const maxRetries = 5;
-  const timerId    = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const timerId = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!shopId) return;
@@ -30,15 +21,12 @@ export function useDashboardSocket(shopId: number | null) {
       wsRef.current = ws;
 
       ws.onopen = () => {
-        retryRef.current = 0; // reset retry counter on successful connection
+        retryRef.current = 0;
       };
 
       ws.onmessage = (event) => {
         try {
-          const data = JSON.parse(event.data as string) as {
-            type: string;
-            payload?: unknown;
-          };
+          const data = JSON.parse(event.data as string) as { type: string; payload?: unknown };
 
           switch (data.type) {
             case "alert": {
@@ -51,22 +39,20 @@ export function useDashboardSocket(shopId: number | null) {
                 reason?: string;
                 created_at?: string;
               };
-              addAlert(alert);
+              addAlert({ ...alert, created_at: alert.created_at ?? new Date().toISOString() });
               break;
             }
 
             case "forecast_ready": {
-              // ML retrain finished — refresh dashboard products
-              // Products are re-fetched via REST since WS only signals readiness
               import("@/lib/api").then(({ getDashboard }) =>
                 getDashboard()
                   .then((d) => {
-                    const data = d as { products?: unknown[] };
-                    if (Array.isArray(data.products)) {
-                      setProducts(data.products as Parameters<typeof setProducts>[0]);
+                    const payload = d as { products?: unknown[] };
+                    if (Array.isArray(payload.products)) {
+                      setProducts(payload.products as Parameters<typeof setProducts>[0]);
                     }
                   })
-                  .catch(console.error)
+                  .catch(console.error),
               );
               break;
             }
@@ -75,7 +61,7 @@ export function useDashboardSocket(shopId: number | null) {
               break;
           }
         } catch {
-          // Non-JSON frame — ignore
+          // Ignore non-JSON frames.
         }
       };
 

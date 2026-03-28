@@ -1,6 +1,6 @@
 "use client";
 
-import { useTheme, Theme, Accent } from "./ThemeContext";
+import { useTheme, Accent } from "./ThemeContext";
 
 export function ThemeWidget() {
   const { theme, setTheme, accent, setAccent, mounted } = useTheme();
@@ -44,3 +44,4 @@ export function ThemeWidget() {
     </div>
   );
 }
+

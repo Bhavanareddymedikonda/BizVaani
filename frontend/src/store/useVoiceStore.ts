@@ -1,4 +1,4 @@
-import { create } from "zustand";
+﻿import { create } from "zustand";
 
 const SESSION_STORAGE_KEY = "bv_voice_session";
 
@@ -115,7 +115,8 @@ export const useVoiceStore = create<VoiceState>((set) => ({
   addUserMessage: (text) => {
     const id = uid();
     set((s) => {
-      const messages = [...s.messages, { id, role: "user", text, timestamp: Date.now() }];
+      const nextMessage: ChatMessage = { id, role: "user", text, timestamp: Date.now() };
+      const messages: ChatMessage[] = [...s.messages, nextMessage];
       persistSession({ messages, sessionId: s.sessionId });
       return { messages };
     });
@@ -124,19 +125,17 @@ export const useVoiceStore = create<VoiceState>((set) => ({
 
   addAssistantMessage: (msg) => {
     set((s) => {
-      const messages = [
-        ...s.messages,
-        {
-          id: msg.id || uid(),
-          role: "assistant",
-          text: msg.text,
-          why: msg.why,
-          what: msg.what,
-          rupeesImpact: msg.rupeesImpact,
-          action: msg.action,
-          timestamp: Date.now(),
-        },
-      ];
+      const nextMessage: ChatMessage = {
+        id: msg.id || uid(),
+        role: "assistant",
+        text: msg.text,
+        why: msg.why,
+        what: msg.what,
+        rupeesImpact: msg.rupeesImpact,
+        action: msg.action,
+        timestamp: Date.now(),
+      };
+      const messages: ChatMessage[] = [...s.messages, nextMessage];
       persistSession({ messages, sessionId: s.sessionId });
       return { messages, isProcessing: false };
     });
@@ -144,7 +143,7 @@ export const useVoiceStore = create<VoiceState>((set) => ({
 
   updateAssistantMessage: (id, patch) => {
     set((s) => {
-      const messages = s.messages.map((m) => (m.id === id ? { ...m, ...patch } : m));
+      const messages: ChatMessage[] = s.messages.map((m) => (m.id === id ? { ...m, ...patch } : m));
       persistSession({ messages, sessionId: s.sessionId });
       return { messages };
     });

@@ -1,18 +1,12 @@
 "use client";
 
-// ============================================================
-// ImpactCard (Profit Simulator) — Task: Member D
-// See: FRONTEND_GUIDELINES.md (Section 4 — ₹ Impact Simulation Card)
-// ============================================================
-
 import { useState } from "react";
 import { simulate } from "@/lib/api";
 
 export default function ImpactCard() {
   const [currentPrice, setCurrentPrice] = useState(45);
   const [suggestedPrice, setSuggestedPrice] = useState(42);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<Record<string, number | string> | null>(null);
   const [loading, setLoading] = useState(false);
 
   const handleSimulate = async () => {
@@ -26,7 +20,7 @@ export default function ImpactCard() {
         suggested_price: suggestedPrice,
         avg_daily_qty: 30,
       });
-      setResult(res);
+      setResult(res as Record<string, number | string>);
     } catch (err) {
       console.error("Simulation failed:", err);
     } finally {
@@ -35,58 +29,44 @@ export default function ImpactCard() {
   };
 
   return (
-    <div className="advanced-card p-6 flex flex-col">
-      <h3 className="font-extrabold text-lg text-white mb-4 uppercase tracking-wide">Profit Simulator</h3>
+    <div className="surface p-6">
+      <p className="eyebrow">Profit simulator</p>
+      <h3 className="mt-2 text-xl font-semibold tracking-[-0.03em] text-[var(--color-text)]">Test a price change before committing.</h3>
 
-      <div className="grid grid-cols-2 gap-4 mb-2">
+      <div className="mt-5 grid grid-cols-2 gap-3">
         <div>
-          <label className="text-xs font-bold text-[#c084fc]/70 uppercase tracking-wider">Current (₹)</label>
-          <input
-            type="number"
-            value={currentPrice}
-            onChange={(e) => setCurrentPrice(Number(e.target.value))}
-            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-2xl text-base font-bold text-white mt-1.5 focus:outline-none focus:ring-2 focus:ring-[#c084fc]/40 transition-all"
-          />
+          <label className="eyebrow">Current price</label>
+          <input type="number" value={currentPrice} onChange={(e) => setCurrentPrice(Number(e.target.value))} className="field mt-2" />
         </div>
         <div>
-          <label className="text-xs font-bold text-[#c084fc]/70 uppercase tracking-wider">New (₹)</label>
-          <input
-            type="number"
-            value={suggestedPrice}
-            onChange={(e) => setSuggestedPrice(Number(e.target.value))}
-            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-2xl text-base font-bold text-white mt-1.5 focus:outline-none focus:ring-2 focus:ring-[#c084fc]/40 transition-all"
-          />
+          <label className="eyebrow">Suggested price</label>
+          <input type="number" value={suggestedPrice} onChange={(e) => setSuggestedPrice(Number(e.target.value))} className="field mt-2" />
         </div>
       </div>
 
-      <button
-        onClick={handleSimulate}
-        disabled={loading}
-        className="advanced-btn w-full py-3.5 mt-5 disabled:opacity-50 disabled:scale-100"
-      >
-        {loading ? "Simulating..." : "Simulate Impact"}
+      <button onClick={handleSimulate} disabled={loading} className="btn-primary mt-5 w-full disabled:opacity-60">
+        {loading ? "Simulating..." : "Simulate impact"}
       </button>
 
-      {result && (
-        <div className="mt-6 p-5 rounded-3xl bg-white/5 border border-white/10 text-center transition-all animate-in fade-in slide-in-from-bottom-4 duration-500 backdrop-blur-md">
-          <p className="text-[#c084fc]/80 text-xs font-bold uppercase tracking-wider mb-2">Expected Extra Profit</p>
-          <p className="text-4xl font-black text-[#4ade80] drop-shadow-[0_0_12px_rgba(74,222,128,0.3)]">₹{result.delta.toLocaleString()}</p>
-          <p className="text-xs font-medium text-white/60 mt-3">{result.summary}</p>
-
-          {/* Simple before/after */}
-          <div className="flex justify-center items-center gap-6 mt-4 pt-4 border-t border-white/10">
-            <div className="text-center">
-              <p className="text-[10px] uppercase font-bold text-[#c084fc]/60">Current</p>
-              <p className="text-lg font-extrabold text-white">₹{result.current_profit.toLocaleString()}</p>
+      {result ? (
+        <div className="surface-muted mt-5 p-4">
+          <p className="eyebrow">Projected profit delta</p>
+          <p className="mt-2 text-4xl font-semibold tracking-[-0.05em] text-[var(--color-success)]">
+            Rs.{Number(result.delta || 0).toLocaleString("en-IN")}
+          </p>
+          <p className="mt-2 text-sm leading-6 text-[var(--color-text-soft)]">{String(result.summary || "")}</p>
+          <div className="mt-4 grid grid-cols-2 gap-3 border-t border-[var(--color-border)] pt-4 text-sm">
+            <div>
+              <p className="eyebrow">Current</p>
+              <p className="mt-1 font-medium text-[var(--color-text)]">Rs.{Number(result.current_profit || 0).toLocaleString("en-IN")}</p>
             </div>
-            <div className="text-xl text-[#4ade80] font-bold opacity-60">→</div>
-            <div className="text-center">
-              <p className="text-[10px] uppercase font-bold text-[#c084fc]/60">Projected</p>
-              <p className="text-lg font-extrabold text-[#4ade80]">₹{result.projected_profit.toLocaleString()}</p>
+            <div>
+              <p className="eyebrow">Projected</p>
+              <p className="mt-1 font-medium text-[var(--color-success)]">Rs.{Number(result.projected_profit || 0).toLocaleString("en-IN")}</p>
             </div>
           </div>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }
