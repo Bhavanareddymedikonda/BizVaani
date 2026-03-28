@@ -225,20 +225,44 @@ async def generate_response(state: ShopState, db: AsyncSession) -> ShopState:
 
 
 
-def _parse_response(state: ShopState, content: str) -> ShopState:
-    """Parse LLM response into WHY/WHAT/₹ sections."""
-    # Try to extract sections
-    why_match = re.search(r'\*?\*?WHY\*?\*?[:\s]*(.+?)(?=\*?\*?WHAT|\*?\*?₹|$)', content, re.DOTALL | re.IGNORECASE)
-    what_match = re.search(r'\*?\*?WHAT\*?\*?[:\s]*(.+?)(?=\*?\*?₹|$)', content, re.DOTALL | re.IGNORECASE)
-    impact_match = re.search(r'₹\s*(?:IMPACT)?[:\s]*(.+?)$', content, re.DOTALL | re.IGNORECASE)
+def _strip_markdown(text: str) -> str:
+    """Remove all markdown formatting from text: bold, italic, headers, bullets."""
+    # Remove bold/italic markers: **, *, __, _
+    text = re.sub(r'\*{1,3}', '', text)
+    text = re.sub(r'_{1,3}', ' ', text)
+    # Remove markdown headers: # ## ### etc
+    text = re.sub(r'^#{1,6}\s*', '', text, flags=re.MULTILINE)
+    # Remove bullet point dashes/asterisks at line start
+    text = re.sub(r'^\s*[-*+]\s+', '', text, flags=re.MULTILINE)
+    # Remove numbered list markers: 1. 2. etc
+    text = re.sub(r'^\s*\d+\.\s+', '', text, flags=re.MULTILINE)
+    # Remove backticks
+    text = re.sub(r'`{1,3}', '', text)
+    # Collapse multiple spaces/newlines
+    text = re.sub(r'\n{3,}', '\n\n', text)
+    text = re.sub(r'  +', ' ', text)
+    return text.strip()
 
-    state["why_text"] = why_match.group(1).strip() if why_match else content[:150]
-    state["what_text"] = what_match.group(1).strip() if what_match else ""
+
+def _parse_response(state: ShopState, content: str) -> ShopState:
+    """Parse LLM response into WHY/WHAT/Rs sections. Strip all markdown."""
+    # First strip all markdown formatting
+    content = _strip_markdown(content)
+
+    # Try to extract sections (plain text labels now)
+    why_match = re.search(r'WHY[:\s]+(.+?)(?=WHAT|Rs\.?\s*IMPACT|$)', content, re.DOTALL | re.IGNORECASE)
+    what_match = re.search(r'WHAT[:\s]+(.+?)(?=Rs\.?\s*IMPACT|$)', content, re.DOTALL | re.IGNORECASE)
+    impact_match = re.search(r'Rs\.?\s*IMPACT[:\s]+(.+?)$', content, re.DOTALL | re.IGNORECASE)
+
+    state["why_text"] = _strip_markdown(why_match.group(1).strip()) if why_match else content[:150]
+    state["what_text"] = _strip_markdown(what_match.group(1).strip()) if what_match else ""
     state["response_text"] = content
 
     # Extract rupee amount from impact section
     if impact_match:
-        rupee_numbers = re.findall(r'₹\s*([\d,]+)', impact_match.group(1))
+        rupee_numbers = re.findall(r'Rs\.?\s*([0-9,]+)', impact_match.group(1))
+        if not rupee_numbers:
+            rupee_numbers = re.findall(r'₹\s*([0-9,]+)', impact_match.group(1))
         if rupee_numbers:
             state["rupees_impact"] = float(rupee_numbers[0].replace(",", ""))
         else:
@@ -248,6 +272,7 @@ def _parse_response(state: ShopState, content: str) -> ShopState:
 
     state["alert_triggered"] = False
     return state
+
 
 
 

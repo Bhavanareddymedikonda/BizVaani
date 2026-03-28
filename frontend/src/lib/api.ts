@@ -65,6 +65,31 @@ export interface InventoryItem {
   cost_price: number | null;
 }
 
+export interface DashboardData {
+  user?: { name?: string };
+  shop?: { shop_name?: string; city?: string };
+  alerts?: Array<{
+    id: number;
+    product_name: string;
+    severity: "HIGH" | "MEDIUM" | "LOW";
+    message: string;
+  }>;
+  top_products?: Array<{
+    id: number;
+    name: string;
+    today_qty: number;
+    today_revenue: number;
+    stock_qty: number;
+    stock_status: "CRITICAL" | "LOW_STOCK" | "IN_STOCK";
+    unit: string;
+    trend_pct: number;
+    mandi_price: number;
+    risk_level: "HIGH" | "MEDIUM" | "LOW";
+  }>;
+  total_today?: { revenue?: number; items_sold?: number; profit_estimate?: number };
+  stock_summary?: { low_stock_count?: number; inventory_value?: number };
+}
+
 export interface StockTransaction {
   id: number;
   product_id: number;
@@ -131,8 +156,8 @@ export async function login(data: { phone: string; password: string }): Promise<
   });
 }
 
-export async function getDashboard() {
-  return request("/api/dashboard");
+export async function getDashboard(): Promise<DashboardData> {
+  return request<DashboardData>("/api/dashboard");
 }
 
 export async function getInventory() {

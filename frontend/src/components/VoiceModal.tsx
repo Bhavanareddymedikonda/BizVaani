@@ -170,61 +170,8 @@ function ChatBubble({
           )}
         </div>
 
-        {!isUser && (msg.why || msg.what || msg.rupeesImpact !== undefined) && (
-          <div className="mt-2 grid gap-2">
-            {msg.why && (
-              <div
-                className="px-3 py-3"
-                style={{
-                  borderRadius: "18px",
-                  background: "rgba(0,212,255,0.06)",
-                  border: "1px solid rgba(0,212,255,0.14)",
-                }}
-              >
-                <p className="mb-1 text-[10px] font-black uppercase tracking-[0.28em]" style={{ color: "#7ae7ff" }}>
-                  Why
-                </p>
-                <p className="text-xs leading-6" style={{ color: "rgba(228,236,255,0.92)" }}>
-                  {msg.why}
-                </p>
-              </div>
-            )}
-            {msg.what && (
-              <div
-                className="px-3 py-3"
-                style={{
-                  borderRadius: "18px",
-                  background: "rgba(124,58,237,0.08)",
-                  border: "1px solid rgba(124,58,237,0.18)",
-                }}
-              >
-                <p className="mb-1 text-[10px] font-black uppercase tracking-[0.28em]" style={{ color: "#c4b5fd" }}>
-                  Next Move
-                </p>
-                <p className="text-xs leading-6" style={{ color: "rgba(228,236,255,0.92)" }}>
-                  {msg.what}
-                </p>
-              </div>
-            )}
-            {msg.rupeesImpact !== undefined && msg.rupeesImpact !== 0 && (
-              <div
-                className="flex items-center justify-between px-3 py-3"
-                style={{
-                  borderRadius: "18px",
-                  background: "linear-gradient(135deg, rgba(0,212,255,0.18), rgba(124,58,237,0.18))",
-                  border: "1px solid rgba(0,212,255,0.16)",
-                }}
-              >
-                <span className="text-[10px] font-black uppercase tracking-[0.28em]" style={{ color: "rgba(255,255,255,0.72)" }}>
-                  Impact
-                </span>
-                <span className="text-sm font-black text-white">
-                  {msg.rupeesImpact > 0 ? "+" : "-"}Rs.{Math.abs(msg.rupeesImpact).toLocaleString("en-IN")}
-                </span>
-              </div>
-            )}
-          </div>
-        )}
+
+
 
         {!isUser && msg.action && (
           <div className="mt-2 grid gap-2">

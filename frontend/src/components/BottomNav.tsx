@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Bell, Package, FileText, Settings, Menu, X, TrendingUp } from "lucide-react";
+import { Home, Bell, TrendingUp, Package, FileText, Settings, Menu, X } from "lucide-react";
 
 export default function AppNavigation() {
   const pathname = usePathname();
@@ -30,10 +30,11 @@ export default function AppNavigation() {
               const isActive = pathname === item.path || (item.path !== "/dashboard" && pathname?.startsWith(item.path));
               const Icon = item.icon;
               
-              if (index === 2) {
+              // Insert MicFAB spacer in the center (between Forecast and Stock)
+              if (index === 3) {
                 return (
                   <React.Fragment key={item.path + '-fragment'}>
-                    <div className="w-16 h-10 pointer-events-none" />
+                    <div className="w-14 h-10 pointer-events-none shrink-0" />
                     <MobileNavItem item={item} isActive={isActive} Icon={Icon} />
                   </React.Fragment>
                 );

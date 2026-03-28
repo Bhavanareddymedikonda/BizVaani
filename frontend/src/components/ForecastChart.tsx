@@ -10,137 +10,136 @@ import {
   ResponsiveContainer,
   ReferenceLine,
 } from "recharts";
+import type { ForecastPoint } from "@/lib/forecastSeedData";
 
-/* ─── Types ──────────────────────────────────────────────── */
-interface SalesPoint {
-  date:         string;
-  actual?:      number;
-  forecast?:    number;
-  lower_bound?: number;
-  upper_bound?: number;
-}
-
+/* ─── Props ──────────────────────────────────────────────── */
 interface Props {
-  data?:        SalesPoint[];
+  data: ForecastPoint[];
   productName?: string;
-  /** If true, renders a mocked 30-day trend for demo purposes */
-  useMock?:     boolean;
-}
-
-/* ─── Mock data (used while real data loads) ─────────────── */
-function generateMockData(): SalesPoint[] {
-  const today = new Date();
-  return Array.from({ length: 30 }, (_, i) => {
-    const d = new Date(today);
-    d.setDate(d.getDate() - (29 - i));
-    const base = 35 + Math.sin(i * 0.4) * 8;
-    const noise = (Math.random() - 0.5) * 6;
-    const actual = Math.max(0, Math.round(base + noise));
-    // Last 7 days: show forecast
-    const isForecast = i >= 23;
-    return {
-      date:        d.toISOString().split("T")[0],
-      actual:      isForecast ? undefined : actual,
-      forecast:    isForecast ? Math.round(base + 2) : undefined,
-      lower_bound: isForecast ? Math.round(base - 4) : undefined,
-      upper_bound: isForecast ? Math.round(base + 8) : undefined,
-    };
-  });
 }
 
 /* ─── Custom Tooltip ─────────────────────────────────────── */
-const CustomTooltip = ({ active, payload, label }: {
+function CustomTooltip({
+  active,
+  payload,
+  label,
+}: {
   active?: boolean;
-  payload?: Array<{ name: string; value: number; color: string }>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  payload?: any[];
   label?: string;
-}) => {
+}) {
   if (!active || !payload?.length) return null;
+
   return (
     <div
-      className="px-3 py-2 text-xs space-y-1"
-      style={{
-        borderRadius: "var(--radius-sm)",
-        background: "var(--color-surface-0)",
-        boxShadow: "var(--shadow-clay)",
-        border: "1px solid rgba(255,255,255,0.5)",
-        color: "var(--color-text-strong)",
-      }}
+      className="rounded-2xl border border-white/10 bg-[#1a1336]/95 px-4 py-3 text-xs shadow-[0_8px_32px_rgba(0,0,0,0.6)] backdrop-blur-xl"
     >
-      <p className="font-bold mb-1">{label}</p>
-      {payload.map((p, i) => (
-        <p key={i} style={{ color: p.color }}>
-          {p.name}: {p.value} kg
-        </p>
-      ))}
+      <p className="mb-2 font-bold text-white/90">
+        {label
+          ? new Date(label).toLocaleDateString("en-IN", {
+              day: "numeric",
+              month: "short",
+              year: "numeric",
+            })
+          : ""}
+      </p>
+      {payload.map((p, i) => {
+        if (p.dataKey === "lower_bound" || p.dataKey === "upper_bound") return null;
+        return (
+          <p key={i} className="flex items-center gap-2">
+            <span
+              className="inline-block h-2 w-2 rounded-full"
+              style={{ background: p.color }}
+            />
+            <span className="text-white/60">{p.name}:</span>
+            <span className="font-bold text-white">{p.value} kg</span>
+          </p>
+        );
+      })}
     </div>
   );
-};
+}
 
 /* ─── Main Chart ─────────────────────────────────────────── */
-export default function ForecastChart({ data, productName = "Sales", useMock = true }: Props) {
-  const chartData = data ?? (useMock ? generateMockData() : []);
-
-  if (!chartData.length) {
+export default function ForecastChart({
+  data,
+  productName = "Product",
+}: Props) {
+  if (!data.length) {
     return (
-      <div
-        className="flex items-center justify-center text-sm"
-        style={{ height: 200, color: "var(--color-text-soft)" }}
-      >
-        Abhi koi data nahi hai
+      <div className="flex h-[300px] items-center justify-center text-sm text-white/40">
+        No forecast data available
       </div>
     );
   }
 
-  // Today marker
   const todayStr = new Date().toISOString().split("T")[0];
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-3">
-        <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "var(--color-text-muted)" }}>
-          {productName} — 30 Din
-        </p>
-        <div className="flex items-center gap-3 text-xs" style={{ color: "var(--color-text-soft)" }}>
-          <span className="flex items-center gap-1">
-            <span className="inline-block w-3 h-0.5" style={{ background: "var(--color-primary-500)" }} />
-            Actual
+    <div className="advanced-card p-6">
+      {/* Header */}
+      <div className="mb-6 flex items-center justify-between">
+        <h3 className="text-lg font-extrabold tracking-wide text-white">
+          Demand Trajectory
+        </h3>
+        <div className="flex items-center gap-5 text-xs text-white/50">
+          <span className="flex items-center gap-1.5">
+            <span className="inline-block h-2 w-2 rounded-full bg-[#f97316]" />
+            AI Forecast
           </span>
-          <span className="flex items-center gap-1">
-            <span className="inline-block w-3 h-0.5 border-t border-dashed" style={{ borderColor: "var(--color-info)" }} />
-            Forecast
+          <span className="flex items-center gap-1.5">
+            <span className="inline-block h-2 w-2 rounded-full bg-[#f97316]/30" />
+            Confidence Band
           </span>
         </div>
       </div>
 
-      <ResponsiveContainer width="100%" height={200}>
-        <AreaChart data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
+      {/* Chart */}
+      <ResponsiveContainer width="100%" height={320}>
+        <AreaChart
+          data={data}
+          margin={{ top: 8, right: 8, bottom: 0, left: -12 }}
+        >
           <defs>
-            <linearGradient id="actualGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%"  stopColor="var(--color-primary-500)" stopOpacity={0.25} />
-              <stop offset="95%" stopColor="var(--color-primary-500)" stopOpacity={0} />
+            <linearGradient id="actualGradFc" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="#c084fc" stopOpacity={0.3} />
+              <stop offset="95%" stopColor="#c084fc" stopOpacity={0} />
             </linearGradient>
-            <linearGradient id="forecastGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%"  stopColor="var(--color-info)" stopOpacity={0.20} />
-              <stop offset="95%" stopColor="var(--color-info)" stopOpacity={0} />
+            <linearGradient id="forecastGradFc" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="#f97316" stopOpacity={0.25} />
+              <stop offset="95%" stopColor="#f97316" stopOpacity={0} />
+            </linearGradient>
+            <linearGradient id="bandGradFc" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="#f97316" stopOpacity={0.12} />
+              <stop offset="95%" stopColor="#f97316" stopOpacity={0.02} />
             </linearGradient>
           </defs>
 
-          <CartesianGrid strokeDasharray="3 3" stroke="rgba(146,121,96,0.10)" />
+          <CartesianGrid
+            strokeDasharray="3 3"
+            stroke="rgba(255,255,255,0.06)"
+            vertical={false}
+          />
 
           <XAxis
             dataKey="date"
-            tick={{ fontSize: 9, fill: "var(--color-text-soft)" }}
+            tick={{ fontSize: 10, fill: "rgba(255,255,255,0.35)" }}
             tickFormatter={(v) =>
-              new Date(v).toLocaleDateString("en-IN", { day: "numeric", month: "short" })
+              new Date(v).toLocaleDateString("en-IN", {
+                day: "numeric",
+                month: "short",
+              })
             }
-            interval={6}
+            interval={2}
             axisLine={false}
             tickLine={false}
           />
           <YAxis
-            tick={{ fontSize: 9, fill: "var(--color-text-soft)" }}
+            tick={{ fontSize: 10, fill: "rgba(255,255,255,0.35)" }}
             axisLine={false}
             tickLine={false}
+            width={40}
           />
 
           <Tooltip content={<CustomTooltip />} />
@@ -148,39 +147,90 @@ export default function ForecastChart({ data, productName = "Sales", useMock = t
           {/* Today reference line */}
           <ReferenceLine
             x={todayStr}
-            stroke="var(--color-primary-400)"
+            stroke="rgba(192,132,252,0.5)"
             strokeDasharray="4 4"
-            label={{ value: "Today", fill: "var(--color-primary-400)", fontSize: 9 }}
+            label={{
+              value: "Today",
+              fill: "rgba(192,132,252,0.7)",
+              fontSize: 10,
+              fontWeight: 700,
+            }}
           />
 
-          {/* Actual sales */}
+          {/* Confidence band — upper bound */}
           <Area
             type="monotone"
-            dataKey="actual"
-            name="Actual"
-            stroke="var(--color-primary-500)"
-            strokeWidth={2}
-            fill="url(#actualGrad)"
+            dataKey="upper_bound"
+            name="Upper Bound"
+            stroke="none"
+            fill="url(#bandGradFc)"
+            fillOpacity={1}
             dot={false}
-            activeDot={{ r: 4, fill: "var(--color-primary-500)" }}
+            activeDot={false}
             connectNulls={false}
           />
 
-          {/* Forecast */}
+          {/* Confidence band — lower bound (erases area below) */}
+          <Area
+            type="monotone"
+            dataKey="lower_bound"
+            name="Lower Bound"
+            stroke="none"
+            fill="#090614"
+            fillOpacity={0.6}
+            dot={false}
+            activeDot={false}
+            connectNulls={false}
+          />
+
+          {/* Actual historical line */}
+          <Area
+            type="monotone"
+            dataKey="actual"
+            name="Actual Sales"
+            stroke="#c084fc"
+            strokeWidth={2.5}
+            fill="url(#actualGradFc)"
+            dot={{ r: 3, fill: "#c084fc", stroke: "#090614", strokeWidth: 2 }}
+            activeDot={{
+              r: 5,
+              fill: "#c084fc",
+              stroke: "#fff",
+              strokeWidth: 2,
+            }}
+            connectNulls={false}
+          />
+
+          {/* Forecast line */}
           <Area
             type="monotone"
             dataKey="forecast"
-            name="Forecast"
-            stroke="var(--color-info)"
-            strokeWidth={2}
-            strokeDasharray="5 4"
-            fill="url(#forecastGrad)"
-            dot={false}
-            activeDot={{ r: 4, fill: "var(--color-info)" }}
+            name="AI Forecast"
+            stroke="#f97316"
+            strokeWidth={2.5}
+            strokeDasharray="6 4"
+            fill="url(#forecastGradFc)"
+            dot={{
+              r: 3,
+              fill: "#f97316",
+              stroke: "#090614",
+              strokeWidth: 2,
+            }}
+            activeDot={{
+              r: 5,
+              fill: "#f97316",
+              stroke: "#fff",
+              strokeWidth: 2,
+            }}
             connectNulls={false}
           />
         </AreaChart>
       </ResponsiveContainer>
+
+      {/* Subtitle */}
+      <p className="mt-3 text-center text-xs text-white/30">
+        {productName} — 14-day history + 7-day AI prediction
+      </p>
     </div>
   );
 }
